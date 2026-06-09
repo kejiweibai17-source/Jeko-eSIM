@@ -7,7 +7,7 @@ import { X, Send, Bot, Sparkles, Loader2 } from "lucide-react";
 // --- 預設問與答內容 ---
 const PRESET_ANSWERS = {
   "怎麼安裝 eSIM？":
-    "安裝步驟：\n1. Email 接收 QR Code。\n2. 手機設定 > 行動服務 > 加入 eSIM。\n3. 掃描 QR Code 即可。\n教學：https://e-sim-pwa-3k6n.vercel.app/operation-shopee/",
+    "安裝步驟：\n1. Email 接收 QR Code。\n2. 手機設定 > 行動服務 > 加入 eSIM。\n3. 掃描 QR Code 即可。\n教學：https://jeko-e-sim.vercel.app/operation-shopee/",
   "我的手機支援嗎？":
     "請檢查：\n- iPhone：設定 > 一般 > 關於本機，查看是否有 EID。\n- Android：撥號輸入 *#06# 查看 EID。\n清單：https://jeko-esim.com/compatibility",
   "日本推薦哪一款？":
