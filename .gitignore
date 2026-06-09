@@ -1,0 +1,7 @@
+node_modules/
+.next/
+*.zip
+*.psd
+*.docx
+.env*
+.DS_Store

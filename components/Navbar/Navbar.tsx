@@ -1,0 +1,673 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+// 🌟 引入 NextAuth 勾子
+import { useSession, signOut } from "next-auth/react";
+// 🚀 導入你的 supabase 客戶端
+import { supabase } from "@/lib/supabaseClient";
+
+import FeaturedCountryCard, {
+  type FeaturedCountry,
+} from "./FeaturedCountryCard";
+
+import {
+  UserIcon,
+  ShoppingCartIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  GlobeAsiaAustraliaIcon,
+  MapIcon,
+  QuestionMarkCircleIcon,
+  GiftIcon,
+  QrCodeIcon,
+  WifiIcon,
+  BookOpenIcon,
+  DevicePhoneMobileIcon,
+  ChatBubbleLeftRightIcon,
+  ArrowRightOnRectangleIcon,
+  Bars3Icon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+
+// --- 1. 定義資料型別 ---
+interface MedusaCategory {
+  id: string;
+  name: string;
+  handle: string;
+  description?: string;
+  metadata?: Record<string, string>;
+}
+
+function buildFeaturedCountries(
+  categories: MedusaCategory[],
+  products: any[],
+): FeaturedCountry[] {
+  const statsByCategory = new Map<
+    string,
+    { count: number; minPrice: number | null }
+  >();
+
+  products.forEach((product) => {
+    const variant = product.variants?.[0];
+    let price: number | null = null;
+    if (variant?.calculated_price?.calculated_amount != null) {
+      price = variant.calculated_price.calculated_amount;
+    } else if (variant?.prices?.[0]?.amount != null) {
+      price = variant.prices[0].amount;
+    }
+
+    const categoryIds: string[] =
+      product.categories?.map((c: { id: string }) => c.id) || [];
+
+    categoryIds.forEach((catId) => {
+      const prev = statsByCategory.get(catId) || {
+        count: 0,
+        minPrice: null as number | null,
+      };
+      prev.count += 1;
+      if (price != null) {
+        prev.minPrice =
+          prev.minPrice == null ? price : Math.min(prev.minPrice, price);
+      }
+      statsByCategory.set(catId, prev);
+    });
+  });
+
+  return categories.map((cat) => {
+    const meta = cat.metadata || {};
+    const stats = statsByCategory.get(cat.id) || { count: 0, minPrice: null };
+
+    return {
+      id: cat.id,
+      name: cat.name || "未命名",
+      slug: cat.handle || "/",
+      description: cat.description || meta.subtitle || "",
+      imageSrc: meta.image_url || meta.image || null,
+      productCount: stats.count,
+      minPrice: stats.minPrice,
+      regionLabel: meta.region_label || meta.region || meta.location || "",
+      badge: meta.badge || meta.tag || "",
+    };
+  });
+}
+
+interface NavbarProps {
+  className?: string;
+}
+
+// --- 2. 導覽列資料 (桌面版) ---
+const navLinks = [
+  { key: "home", label: "首頁", href: "/", hasMega: true },
+  { key: "categories", label: "精選國家", href: "/product", hasMega: true },
+  { key: "blog", label: "旅遊須知", href: "/blog" },
+  { key: "tutorial", label: "啟用教學", href: "/operation-shopee" },
+  { key: "tutorial", label: "關於Jeko", href: "/about" },
+  { key: "tutorial", label: "合作夥伴", href: "/cooperation" },
+  { key: "usage", label: "蝦皮兌換", href: "/shopee-qrcode" },
+  { key: "usage", label: "查詢用量", href: "/data-query" },
+];
+
+const fullMenuLinks = [
+  ...navLinks,
+  { key: "shopee", label: "蝦皮兌換", href: "/shopee-qrcode" },
+  { key: "sale", label: "限時特惠", href: "#" },
+  { key: "contact", label: "聯絡我們", href: "/contact" },
+  { key: "partner", label: "合作夥伴", href: "/cooperation" },
+];
+
+// --- 3. Navbar 主元件 ---
+export default function Navbar({ className }: NavbarProps) {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  // --- UI 狀態管理 ---
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [openMega, setOpenMega] = useState<string>("none");
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // --- 登入狀態管理 (Dual-Engine) ---
+  const { data: session, status: nextAuthStatus } = useSession();
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [isSupabaseChecked, setIsSupabaseChecked] = useState(false);
+
+  // --- 分類資料狀態 ---
+  const [featuredCountries, setFeaturedCountries] = useState<FeaturedCountry[]>(
+    [],
+  );
+  const [loadingCats, setLoadingCats] = useState<boolean>(true);
+
+  // 初始化掛載與滾動監聽
+  useEffect(() => {
+    setMounted(true);
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // 抓取 Supabase 會員
+  useEffect(() => {
+    const fetchSupabaseUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setSupabaseUser(user);
+      setIsSupabaseChecked(true);
+    };
+    fetchSupabaseUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSupabaseUser(session?.user || null);
+    });
+
+    return () => subscription?.unsubscribe();
+  }, []);
+
+  const isLoggedIn = nextAuthStatus === "authenticated" || !!supabaseUser;
+  const userName =
+    supabaseUser?.user_metadata?.full_name || session?.user?.name || "會員";
+  const userImage =
+    supabaseUser?.user_metadata?.avatar_url || session?.user?.image || null;
+
+  // 抓取 Medusa 分類
+  useEffect(() => {
+    const fetchCategoriesFromMedusa = async () => {
+      try {
+        setLoadingCats(true);
+        const backendUrl =
+          process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
+        const publishableKey =
+          process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || "";
+
+        const headers = {
+          "Content-Type": "application/json",
+          ...(publishableKey && { "x-publishable-api-key": publishableKey }),
+        };
+
+        const [catRes, prodRes] = await Promise.all([
+          fetch(`${backendUrl}/store/product-categories`, {
+            method: "GET",
+            headers,
+          }),
+          fetch(`${backendUrl}/store/products?limit=100`, {
+            method: "GET",
+            headers,
+          }),
+        ]);
+
+        if (!catRes.ok) throw new Error("無法取得 Medusa 分類資料");
+
+        const catData = await catRes.json();
+        const prodData = prodRes.ok ? await prodRes.json() : { products: [] };
+
+        if (catData.product_categories) {
+          setFeaturedCountries(
+            buildFeaturedCountries(
+              catData.product_categories,
+              prodData.products || [],
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("❌ Navbar 抓取 Medusa 分類失敗:", error);
+      } finally {
+        setLoadingCats(false);
+      }
+    };
+    if (mounted) fetchCategoriesFromMedusa();
+  }, [mounted]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    await signOut({ redirect: false });
+    setMobileOpen(false);
+    router.push("/login");
+  };
+
+  // 背景遮罩：桌面 mega menu 時遮罩在 navbar 下方，避免攔截 hover
+  const showOverlay = openMega !== "none" || mobileOpen;
+
+  if (!mounted) return null;
+
+  return (
+    <>
+      {/* 背景遮罩 (Overlay) */}
+      <AnimatePresence>
+        {showOverlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setOpenMega("none");
+              setMobileOpen(false);
+            }}
+            className={cn(
+              "fixed inset-0 bg-black/40 backdrop-blur-[2px] cursor-pointer",
+              mobileOpen ? "z-[9999]" : "z-[998]",
+            )}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ==========================================
+          主要導覽列 (膠囊懸浮設計)
+      ========================================== */}
+      <header
+        className={cn(
+          "fixed top-0 left-0 w-full z-[1000] transition-all duration-300 pointer-events-none",
+          isScrolled ? "pt-2 px-2 md:px-4" : "pt-4 px-4 md:pt-6 md:px-6",
+          className,
+        )}
+      >
+        <div
+          className="mx-auto max-w-[1400px] pointer-events-auto rounded-2xl shadow-xl flex flex-col relative"
+          onMouseLeave={() => setOpenMega("none")}
+        >
+          {/* 上半部：白色區塊 (Logo & 工具列) */}
+          <div className="bg-white rounded-t-2xl lg:rounded-t-2xl rounded-2xl lg:rounded-b-none px-5 py-3 lg:py-4 flex justify-between items-center relative z-[30]">
+            {/* Logo */}
+            <Link
+              href="/"
+              className="flex items-center gap-1 select-none shrink-0"
+            >
+              <span className="text-[20px] lg:text-[22px] font-black tracking-tighter">
+                <span className="text-[#0A6CD0]">Jeko</span>
+                <span className="text-[#24A148]">.eSIM</span>
+              </span>
+            </Link>
+
+            {/* 右側動作按鈕 */}
+            <div className="flex items-center gap-2 lg:gap-3">
+              {/* 🌟 橫向展開的會員狀態區塊 (電腦版) */}
+              <div className="hidden lg:flex items-center pr-4 mr-2 border-r border-slate-100 gap-5">
+                {isLoggedIn ? (
+                  <>
+                    {/* 會員頭像與名稱 */}
+                    <div className="flex items-center gap-2">
+                      {userImage ? (
+                        <img
+                          src={userImage}
+                          alt="Avatar"
+                          className="w-6 h-6 rounded-full object-cover border border-slate-200"
+                        />
+                      ) : (
+                        <UserIcon className="w-5 h-5 text-slate-500" />
+                      )}
+                      <span className="text-sm font-bold text-slate-700">
+                        {userName}
+                      </span>
+                    </div>
+                    {/* 會員中心連結 */}
+                    <Link
+                      href="/account"
+                      className="text-sm font-bold text-slate-500 hover:text-[#0A6CD0] transition-colors"
+                    >
+                      會員中心 / 訂單
+                    </Link>
+                    {/* 登出按鈕 */}
+                    <button
+                      onClick={handleLogout}
+                      className="text-sm font-bold text-slate-500 hover:text-red-500 transition-colors"
+                    >
+                      登出
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="text-sm font-bold text-slate-600 hover:text-[#0A6CD0] transition-colors flex items-center gap-2"
+                  >
+                    <UserIcon className="w-5 h-5" />
+                    登入 / 註冊
+                  </Link>
+                )}
+              </div>
+
+              {/* 購物車 (粉色按鈕) */}
+              <Link
+                href="/Cart"
+                className="bg-[#F4596A] hover:bg-[#e04556] text-white text-xs font-bold px-3 py-2 lg:px-6 lg:py-2.5 rounded-lg flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <ShoppingCartIcon className="w-4 h-4" />
+                <span className="hidden lg:inline">進入購物車</span>
+                <ChevronRightIcon className="w-4 h-4 hidden lg:block" />
+              </Link>
+
+              {/* 手機版：動畫漢堡選單 */}
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors ml-1"
+              >
+                <div className="relative w-4 h-3">
+                  <span
+                    className={cn(
+                      "absolute block h-[2px] w-4 bg-[#0A6CD0] transition-all duration-300",
+                      mobileOpen ? "top-1.5 rotate-45" : "top-0",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "absolute top-1.5 block h-[2px] w-4 bg-[#0A6CD0] transition-all duration-300",
+                      mobileOpen && "opacity-0",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "absolute block h-[2px] w-4 bg-[#0A6CD0] transition-all duration-300",
+                      mobileOpen ? "top-1.5 -rotate-45" : "top-3",
+                    )}
+                  />
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* 下半部：品牌藍色區塊 (選單 - 僅限電腦版顯示) */}
+          <div className="hidden lg:flex bg-[#0A6CD0] rounded-b-2xl h-[56px] relative justify-center items-center px-6 z-20">
+            <nav className="flex gap-10 items-center h-full">
+              {navLinks.map((link, index) => (
+                <div
+                  key={`${link.key}-${link.href}-${index}`}
+                  className="h-full flex items-center relative group cursor-pointer"
+                  onMouseEnter={() =>
+                    setOpenMega(link.hasMega ? link.key : "none")
+                  }
+                >
+                  <Link
+                    href={link.href}
+                    className="text-white text-sm font-bold tracking-wide"
+                  >
+                    {link.label}
+                  </Link>
+                  {/* Hover 黃色底線特效 */}
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] bg-[#FFD43A] transition-all duration-300 w-0 group-hover:w-full" />
+                </div>
+              ))}
+            </nav>
+          </div>
+
+          {/* ==========================================
+              Mega Menu 下拉選單 (附著在 Navbar 底層 - 電腦版)
+          ========================================== */}
+          <AnimatePresence>
+            {openMega !== "none" && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="absolute top-full left-0 w-full bg-white rounded-b-2xl shadow-2xl pt-4 pb-10 z-40 hidden lg:block border border-t-0 border-gray-100"
+              >
+                <div className="px-10 max-w-[1200px] mx-auto">
+                  {openMega === "home" && (
+                    <div className="flex gap-10">
+                      <div className="flex flex-col space-y-4">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b pb-2">
+                          快速導覽
+                        </p>
+                        <Link
+                          href="/news"
+                          className="font-bold text-gray-700 hover:text-[#0A6CD0]"
+                        >
+                          最新優惠活動
+                        </Link>
+                        <Link
+                          href="/coverage"
+                          className="font-bold text-gray-700 hover:text-[#0A6CD0]"
+                        >
+                          全球訊號覆蓋範圍
+                        </Link>
+                        <Link
+                          href="/support"
+                          className="font-bold text-gray-700 hover:text-[#0A6CD0]"
+                        >
+                          幫助中心
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  {openMega === "categories" && (
+                    <>
+                      <div className="flex items-end justify-between gap-4 mb-5 border-b border-gray-100 pb-3">
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                            精選國家
+                          </p>
+                          <p className="mt-1 text-sm text-gray-500">
+                            熱門旅遊目的地 eSIM 方案
+                          </p>
+                        </div>
+                        <Link
+                          href="/product"
+                          onClick={() => setOpenMega("none")}
+                          className="text-sm font-bold text-[#0A6CD0] hover:underline shrink-0"
+                        >
+                          查看全部 →
+                        </Link>
+                      </div>
+                      {loadingCats ? (
+                        <div className="flex justify-center items-center py-12">
+                          <span className="text-gray-400 font-bold animate-pulse">
+                            載入中...
+                          </span>
+                        </div>
+                      ) : featuredCountries.length > 0 ? (
+                        <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
+                          {featuredCountries.map((country) => (
+                            <FeaturedCountryCard
+                              key={country.id}
+                              country={country}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-sm py-8 text-center">
+                          尚未建立國家分類
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </header>
+
+      {/* =========================================
+          手機版下拉選單 (還原為白色的浮動清單)
+      ========================================= */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.nav
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            className="fixed top-[80px] left-0 right-0 w-[94%] mx-auto z-[10001] lg:hidden rounded-2xl bg-white shadow-2xl border border-black/5 p-5 overflow-y-auto max-h-[80vh]"
+          >
+            <div className="flex flex-col gap-6">
+              {/* 會員頭像顯示區塊 */}
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="w-11 h-11 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden border-2 border-white shrink-0">
+                  {isLoggedIn && userImage ? (
+                    <img
+                      src={userImage}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="w-5 h-5 text-[#0A6CD0]" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-[11px] text-[#0A6CD0] font-bold">
+                    歡迎回來
+                  </p>
+                  <p className="text-sm font-black text-slate-800">
+                    {isLoggedIn ? userName : "訪客，請先登入"}
+                  </p>
+                </div>
+              </div>
+
+              {/* 🌟 購物與方案區 */}
+              <div className="grid grid-cols-1 gap-2.5">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-2 mb-1">
+                  精選國家
+                </p>
+                {!loadingCats && featuredCountries.length > 0 && (
+                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 mb-2">
+                    {featuredCountries.slice(0, 8).map((country) => (
+                      <FeaturedCountryCard
+                        key={country.id}
+                        country={country}
+                        compact
+                        onNavigate={() => setMobileOpen(false)}
+                      />
+                    ))}
+                  </div>
+                )}
+                <MobileSimpleNavItem
+                  icon={<GlobeAsiaAustraliaIcon className="w-5 h-5" />}
+                  label="瀏覽全部國家方案"
+                  href="/product"
+                  onClick={() => setMobileOpen(false)}
+                />
+                <MobileSimpleNavItem
+                  icon={<GiftIcon className="w-5 h-5" />}
+                  label="最新優惠 / 限時特惠"
+                  href="/news"
+                  onClick={() => setMobileOpen(false)}
+                />
+              </div>
+
+              {/* 🌟 教學與工具區 */}
+              <div className="grid grid-cols-1 gap-2.5 pt-2 border-t border-slate-100">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-2 mb-1">
+                  教學與工具
+                </p>
+                <MobileSimpleNavItem
+                  icon={<MapIcon className="w-5 h-5" />}
+                  label="全球訊號覆蓋範圍"
+                  href="/coverage"
+                  onClick={() => setMobileOpen(false)}
+                />
+                <MobileSimpleNavItem
+                  icon={<DevicePhoneMobileIcon className="w-5 h-5" />}
+                  label="eSIM 啟用教學"
+                  href="/operation-shopee"
+                  onClick={() => setMobileOpen(false)}
+                />
+                <MobileSimpleNavItem
+                  icon={<QrCodeIcon className="w-5 h-5" />}
+                  label="蝦皮訂單兌換"
+                  href="/shopee-qrcode"
+                  onClick={() => setMobileOpen(false)}
+                />
+                <MobileSimpleNavItem
+                  icon={<WifiIcon className="w-5 h-5" />}
+                  label="查詢數據用量"
+                  href="/data-query"
+                  onClick={() => setMobileOpen(false)}
+                />
+              </div>
+
+              {/* 🌟 支援與聯絡區 */}
+              <div className="grid grid-cols-1 gap-2.5 pt-2 border-t border-slate-100">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-2 mb-1">
+                  支援與聯絡
+                </p>
+                <MobileSimpleNavItem
+                  icon={<BookOpenIcon className="w-5 h-5" />}
+                  label="旅遊須知｜部落格"
+                  href="/blog"
+                  onClick={() => setMobileOpen(false)}
+                />
+                <MobileSimpleNavItem
+                  icon={<QuestionMarkCircleIcon className="w-5 h-5" />}
+                  label="常見問題與支援"
+                  href="/support"
+                  onClick={() => setMobileOpen(false)}
+                />
+                <MobileSimpleNavItem
+                  icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />}
+                  label="聯絡我們 / 合作夥伴"
+                  href="/cooperation"
+                  onClick={() => setMobileOpen(false)}
+                />
+              </div>
+
+              {/* 🌟 底部操作按鈕整合區 (購物車、登入、登出) */}
+              <div className="mt-2 pt-5 border-t border-gray-100 flex flex-col gap-3">
+                <Link
+                  href="/Cart"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0A6CD0] py-3.5 text-sm font-bold text-white shadow-sm transition-opacity active:opacity-80"
+                >
+                  <ShoppingCartIcon className="w-5 h-5" />
+                  我的購物車
+                </Link>
+
+                {isLoggedIn ? (
+                  <div className="flex gap-3">
+                    <Link
+                      href="/account"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#F2F4F7] text-[#0A6CD0] py-3.5 text-sm font-bold shadow-sm transition-opacity active:opacity-80"
+                    >
+                      <UserIcon className="w-5 h-5" />
+                      會員中心
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleLogout();
+                      }}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-50 text-red-600 border border-red-100 py-3.5 text-sm font-bold shadow-sm transition-opacity active:opacity-80"
+                    >
+                      <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                      安全登出
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#F2F4F7] text-[#0A6CD0] py-3.5 text-sm font-bold shadow-sm transition-opacity active:opacity-80"
+                  >
+                    <UserIcon className="w-5 h-5" />
+                    登入 / 註冊帳號
+                  </Link>
+                )}
+              </div>
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// --- 輔助組件 ---
+
+// 手機版清單項目
+function MobileSimpleNavItem({ icon, label, href, onClick }: any) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex h-12 w-full items-center gap-4 rounded-xl border border-neutral-200 bg-white px-5 shadow-sm transition-colors active:bg-slate-50"
+    >
+      <div className="text-slate-400">{icon}</div>
+      <span className="text-[13px] font-black text-slate-700">{label}</span>
+    </Link>
+  );
+}
