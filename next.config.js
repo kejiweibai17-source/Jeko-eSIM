@@ -9,7 +9,8 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   reloadOnOnline: true,
   swcMinify: true,
   disable: process.env.NODE_ENV === "development",
-  cacheStartUrl: false, // 避免 start URL precache 問題
+  register: false, // 由 PushButton 統一 register，避免與 next-pwa 雙重註冊競爭
+  cacheStartUrl: false,
 
   fallbacks: {
     document: "/_offline",
@@ -46,7 +47,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   ],
 
   workboxOptions: {
-    disableDevLogs: false, // 暫時開啟，方便 Console 看 precache 問題
+    disableDevLogs: true,
     maximumFileSizeToCacheInBytes: 2 * 1024 * 1024, // 2MB 上限，避免大檔拖垮 install
     exclude: [/index\.html$/, /\.(?:psd|ai|FBX|fbx|glb|mp4|ttc|TTC)$/i],
     manifestTransforms: [
