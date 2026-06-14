@@ -14,6 +14,7 @@ import {
   authError,
   parseNextAuthError,
   logLineLoginStart,
+  getOAuthRedirectUrl,
 } from "../lib/authDebug";
 
 const LoginRegisterPage = () => {
@@ -48,6 +49,12 @@ const LoginRegisterPage = () => {
     // 捕捉從跳轉回來時，隱藏在網址列的錯誤碼
     const hash = window.location.hash;
     const search = window.location.search;
+
+    if (hash.includes("access_token")) {
+      addLog("✅ Google OAuth 回傳 access_token（hash）");
+      authLog("Supabase OAuth callback hash", { hash: hash.slice(0, 80) + "..." });
+      // Supabase client 會自動解析 hash；稍後 onAuthStateChange 會觸發 SIGNED_IN
+    }
 
     if (hash.includes("error") || search.includes("error")) {
       const urlParams = new URLSearchParams(hash.replace("#", "?"));
@@ -122,23 +129,26 @@ const LoginRegisterPage = () => {
     }
   };
 
-  // Supabase 的 OAuth 登入 (留給 Google 用)
+  // Supabase 的 OAuth 登入 (Google)
   const handleOAuthLogin = async (provider) => {
     try {
       addLog(`準備請求 ${provider} 授權...`);
-      const redirectUrl = `${window.location.origin}/login`;
-      addLog(`預計回傳網址: ${redirectUrl}`);
+      const redirectUrl = getOAuthRedirectUrl("/account");
+      addLog(`redirectTo: ${redirectUrl}`);
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
           redirectTo: redirectUrl,
+          skipBrowserRedirect: false,
         },
       });
 
+      authLog("signInWithOAuth 回傳", { provider, url: data?.url, error: error?.message });
       if (error) throw error;
     } catch (err) {
       addLog(`❌ 跳轉前發生錯誤: ${err.message}`);
+      setMessage(`Google 登入失敗: ${err.message}`);
     }
   };
 

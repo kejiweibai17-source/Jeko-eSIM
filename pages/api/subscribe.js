@@ -44,20 +44,41 @@ export default async function handler(req, res) {
     return res.status(405).end("Method Not Allowed");
   }
 
+  const debug = { steps: [] };
+  const step = (name, detail) => {
+    debug.steps.push({ name, ...detail });
+    console.log(`[Push Debug] subscribe | ${name}`, detail ?? "");
+  };
+
+  // 0. 環境檢查
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    step("env_check", { ok: false, error: "VAPID 金鑰未設定" });
+    return res.status(500).json({
+      error: "VAPID 金鑰未設定",
+      hint: "Vercel 需設定 NEXT_PUBLIC_VAPID_PUBLIC_KEY 與 VAPID_PRIVATE_KEY",
+      debug,
+    });
+  }
+
   // 1. 從 Authorization header 取得 user_id
   let userId = null;
   const authHeader = req.headers.authorization || "";
   const token = authHeader.replace("Bearer ", "").trim();
   if (token) {
-    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     userId = user?.id ?? null;
+    step("auth", { ok: !!userId, userId: userId?.slice(0, 8), authError: authErr?.message });
+  } else {
+    step("auth", { ok: false, warning: "無 Bearer token，仍會存訂閱但 user_id 為 null" });
   }
 
   // 2. 解析訂閱憑證
   const { endpoint, keys } = req.body ?? {};
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
-    return res.status(400).json({ error: "訂閱憑證格式不完整" });
+    step("parse_body", { ok: false, hasEndpoint: !!endpoint, hasKeys: !!keys });
+    return res.status(400).json({ error: "訂閱憑證格式不完整", debug });
   }
+  step("parse_body", { ok: true, endpointPrefix: endpoint.slice(0, 40) });
 
   // 3. 存入 Supabase（upsert 避免重複）
   const { error: dbError } = await supabaseAdmin
@@ -68,9 +89,15 @@ export default async function handler(req, res) {
     );
 
   if (dbError) {
-    console.error("[subscribe] Supabase 寫入失敗:", dbError.message);
-    return res.status(500).json({ error: "儲存訂閱憑證失敗" });
+    step("db_upsert", { ok: false, error: dbError.message, code: dbError.code });
+    console.error("[Push Debug] subscribe Supabase 寫入失敗:", dbError.message);
+    const hint =
+      dbError.message?.includes("does not exist") || dbError.code === "42P01"
+        ? "請到 Supabase SQL Editor 建立 push_subscriptions 表"
+        : "檢查 SUPABASE_SERVICE_ROLE_KEY 與資料表權限";
+    return res.status(500).json({ error: "儲存訂閱憑證失敗", detail: dbError.message, hint, debug });
   }
+  step("db_upsert", { ok: true });
 
   // 4. 發送「訂閱成功」測試推播
   const payload = JSON.stringify({
@@ -79,12 +106,25 @@ export default async function handler(req, res) {
     url: "/data-query/",
   });
 
+  let testPushOk = false;
+  let testPushError = null;
   try {
     await webpush.sendNotification({ endpoint, keys }, payload);
+    testPushOk = true;
+    step("test_push", { ok: true });
   } catch (pushErr) {
-    // 推播失敗不影響主流程（已存 DB 就算成功）
-    console.warn("[subscribe] 測試推播失敗:", pushErr.message);
+    testPushOk = false;
+    testPushError = pushErr.message;
+    step("test_push", { ok: false, error: pushErr.message, statusCode: pushErr.statusCode });
+    console.warn("[Push Debug] subscribe 測試推播失敗:", pushErr.message);
   }
 
-  return res.status(201).json({ success: true, message: "訂閱成功！" });
+  return res.status(201).json({
+    success: true,
+    message: "訂閱成功！",
+    testPushOk,
+    testPushError,
+    userId: userId?.slice(0, 8) || null,
+    debug,
+  });
 }

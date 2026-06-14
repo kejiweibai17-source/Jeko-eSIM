@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 // 🚀 關鍵引入：匯入 NextAuth 的 signIn 函數
 import { signIn } from "next-auth/react";
-import { authLog, logLineLoginStart } from "../lib/authDebug";
+import { authLog, logLineLoginStart, getOAuthRedirectUrl } from "../lib/authDebug";
 
 const RESEND_WAIT_SECONDS = 60;
 
@@ -141,11 +141,10 @@ const RegisterForm = ({ onSuccess }) => {
   /* ====== 4. 社群快速註冊 (Google - Supabase OAuth) ====== */
   const handleOAuthLogin = async (provider) => {
     try {
+      const redirectTo = getOAuthRedirectUrl("/account");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
-        options: {
-          redirectTo: `${window.location.origin}/account`,
-        },
+        options: { redirectTo },
       });
       if (error) throw error;
     } catch (err) {

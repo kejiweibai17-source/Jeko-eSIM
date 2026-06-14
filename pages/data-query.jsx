@@ -253,7 +253,7 @@ export default function DataQueryPage() {
           </div>
 
           {/* ── 推播訂閱 ── */}
-          <div className="mb-14 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#F0F7FF] border border-[#0A6CD0]/20 rounded-2xl px-6 py-5">
+          <div className="mb-14 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#F0F7FF] border border-[#0A6CD0]/20 rounded-2xl px-6 py-5">
             <div>
               <p className="font-black text-stone-900 text-sm">流量快用完時通知我</p>
               <p className="text-xs text-stone-500 mt-1">
