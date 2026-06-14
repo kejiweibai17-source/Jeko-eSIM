@@ -120,7 +120,7 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
 
       // 2. Service Worker（明確 register，避免 ready 永遠 pending）
       setCurrentStep("註冊 Service Worker");
-      const registration = await ensureServiceWorkerReady(addLog, 20000);
+      const registration = await ensureServiceWorkerReady(addLog, 60000);
 
       // 3. Push 訂閱
       setCurrentStep("向 Push 伺服器訂閱");

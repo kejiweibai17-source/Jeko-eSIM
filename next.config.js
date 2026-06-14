@@ -4,22 +4,64 @@ const path = require("path");
 // ★★★ 引入 PWA 套件 ★★★
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
-  cacheOnFrontEndNav: true, // 邊走邊存：客人點過的頁面自動快取
-  aggressiveFrontEndNavCaching: true, 
-  reloadOnOnline: true, // 當網路恢復時自動重新載入
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: false, // 關閉可減少 SW 複雜度
+  reloadOnOnline: true,
   swcMinify: true,
-  disable: process.env.NODE_ENV === "development", // 開發環境關閉 PWA
-  
-  // ★★★ 殺手級防護：明確指定斷線時要顯示的頁面 ★★★
+  disable: process.env.NODE_ENV === "development",
+  cacheStartUrl: false, // 避免 start URL precache 問題
+
   fallbacks: {
-    document: "/_offline", // 當找不到快取且沒網路時，強制顯示這頁
+    document: "/_offline",
   },
-  
+
+  // public/ 大量素材不應 precache（手機 SW install 會卡數十秒甚至失敗）
+  publicExcludes: [
+    "!noprecache/**/*",
+    "!images/**",
+    "!assets/**",
+    "!fonts/**",
+    "!videos/**",
+    "!參考/**",
+    "!nextImageExportOptimizer/**",
+    "!static/**",
+    "!Logo/**",
+    "!Lottie/**",
+    "!**/*.psd",
+    "!**/*.ai",
+    "!**/*.FBX",
+    "!**/*.fbx",
+    "!**/*.glb",
+    "!**/*.mp4",
+    "!**/*.ttc",
+    "!**/*.TTC",
+    "!**/*.TTF",
+    "!AccuCities*",
+    "!img*.jpg",
+    "!img*.jpeg",
+    "!trip*.jpg",
+    "!lens-transformed.glb",
+    "!shoe-draco.glb",
+    "!index.html",
+  ],
+
   workboxOptions: {
-    disableDevLogs: true,
-    maximumFileSizeToCacheInBytes: 5000000,
-    // public/index.html 在 Next.js 路由下會 404，precache 失敗會讓 SW 無法 ready（推播卡住）
-    exclude: [/index\.html$/],
+    disableDevLogs: false, // 暫時開啟，方便 Console 看 precache 問題
+    maximumFileSizeToCacheInBytes: 2 * 1024 * 1024, // 2MB 上限，避免大檔拖垮 install
+    exclude: [/index\.html$/, /\.(?:psd|ai|FBX|fbx|glb|mp4|ttc|TTC)$/i],
+    manifestTransforms: [
+      (entries) => ({
+        manifest: entries.filter(({ url }) => {
+          if (/index\.html$/i.test(url)) return false;
+          if (/\.(?:psd|ai|FBX|fbx|glb|mp4|ttc|TTC|TTF)$/i.test(url)) return false;
+          if (/^\/(?:images|videos|fonts|assets|參考|nextImageExportOptimizer|Logo|Lottie|static)\//.test(url)) {
+            return false;
+          }
+          return true;
+        }),
+        warnings: [],
+      }),
+    ],
   },
 });
 
