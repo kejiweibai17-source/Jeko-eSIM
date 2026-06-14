@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 // 🚀 關鍵引入：匯入 NextAuth 的 signIn 函數
 import { signIn } from "next-auth/react";
+import { authLog, logLineLoginStart } from "../lib/authDebug";
 
 const RESEND_WAIT_SECONDS = 60;
 
@@ -152,6 +153,22 @@ const RegisterForm = ({ onSuccess }) => {
     }
   };
 
+  /* ====== LINE 快速登入 (NextAuth) ====== */
+  const handleLineLogin = async () => {
+    authLog("RegisterForm LINE 登入開始");
+    const { callbackUrl } = await logLineLoginStart(
+      window.location.origin,
+      "/account",
+    );
+    const result = await signIn("line", { callbackUrl, redirect: false });
+    authLog("RegisterForm signIn 回傳", result);
+    if (result?.error) {
+      alert(`LINE 登入失敗: ${result.error}`);
+    } else if (result?.url) {
+      window.location.href = result.url;
+    }
+  };
+
   return (
     <div className="relative text-white">
       {showSuccessPopup && (
@@ -281,7 +298,7 @@ const RegisterForm = ({ onSuccess }) => {
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => signIn("line", { callbackUrl: "/account" })}
+            onClick={handleLineLogin}
             className="flex items-center justify-center gap-2.5 w-full rounded-full bg-[#06C755] border border-transparent py-2.5 text-[13px] font-semibold text-white tracking-wide transition hover:brightness-105 shadow-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

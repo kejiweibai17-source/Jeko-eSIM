@@ -8,8 +8,13 @@ import ForgotPasswordForm from "../components/ForgotPasswordForm";
 import { supabase } from "../lib/supabaseClient";
 import { useUser } from "../components/context/UserContext";
 
-// 🚀 補上這行：引入 NextAuth 的 signIn 函數
 import { signIn } from "next-auth/react";
+import {
+  authLog,
+  authError,
+  parseNextAuthError,
+  logLineLoginStart,
+} from "../lib/authDebug";
 
 const LoginRegisterPage = () => {
   const router = useRouter();
@@ -51,10 +56,23 @@ const LoginRegisterPage = () => {
         urlParams.get("error_description") ||
         searchParams.get("error_description") ||
         "未知錯誤";
+      const nextAuthErr = parseNextAuthError(search);
 
       addLog(`❌ 抓到授權錯誤: ${errDesc}`);
-      setMessage(`第三方登入失敗: ${errDesc}`);
+      if (nextAuthErr) {
+        authLog("NextAuth error query", nextAuthErr);
+        addLog(`❌ NextAuth [${nextAuthErr.code}]: ${nextAuthErr.hint}`);
+        setMessage(`LINE 登入失敗 [${nextAuthErr.code}]: ${nextAuthErr.hint}`);
+      } else {
+        setMessage(`第三方登入失敗: ${errDesc}`);
+      }
     }
+
+    // 啟動時拉一次 server env 摘要
+    fetch("/api/auth/debug-config")
+      .then((r) => r.json())
+      .then((cfg) => authLog("login 頁載入 — server env", cfg))
+      .catch((e) => authError("login 頁無法取得 debug-config", e));
 
     // 監聽 Supabase 的事件變化
     const {
@@ -121,6 +139,41 @@ const LoginRegisterPage = () => {
       if (error) throw error;
     } catch (err) {
       addLog(`❌ 跳轉前發生錯誤: ${err.message}`);
+    }
+  };
+
+  // LINE 登入（NextAuth）— 含完整 debug log
+  const handleLineLogin = async () => {
+    try {
+      addLog("🟢 點擊 LINE 登入...");
+      const { callbackUrl, serverConfig } = await logLineLoginStart(
+        window.location.origin,
+        "/account",
+      );
+      addLog(`callbackUrl: ${callbackUrl}`);
+      if (serverConfig?.expectedLineCallback) {
+        addLog(`伺服器推算 LINE callback: ${serverConfig.expectedLineCallback}`);
+      }
+
+      // redirect:false 可先在 console 看到 OAuth URL（含 redirect_uri）
+      const result = await signIn("line", { callbackUrl, redirect: false });
+      authLog("signIn('line') 回傳", result);
+
+      if (result?.error) {
+        addLog(`❌ signIn error: ${result.error}`);
+        setMessage(`LINE 登入失敗: ${result.error}`);
+        return;
+      }
+      if (result?.url) {
+        addLog(`➡️ 導向 LINE OAuth: ${result.url}`);
+        window.location.href = result.url;
+      } else {
+        addLog("⚠️ signIn 無 url 也無 error");
+      }
+    } catch (err) {
+      authError("handleLineLogin 例外", err);
+      addLog(`❌ ${err.message}`);
+      setMessage(`LINE 登入異常: ${err.message}`);
     }
   };
 
@@ -269,9 +322,7 @@ const LoginRegisterPage = () => {
 
                       <button
                         type="button"
-                        onClick={() =>
-                          signIn("line", { callbackUrl: "/account" })
-                        }
+                        onClick={handleLineLogin}
                         className="flex items-center justify-center gap-2.5 w-full rounded-full bg-[#06C755] border border-transparent py-2.5 text-[13px] font-semibold text-white tracking-wide transition hover:brightness-105 shadow-sm"
                       >
                         <svg
@@ -309,6 +360,20 @@ const LoginRegisterPage = () => {
             </div>
           )}
         </div>
+
+        {/* 🛠️ Auth Debug 面板（正式站也可看 Console；此區塊輔助非工程師） */}
+        {debugLogs.length > 0 && (
+          <div className="mt-6 w-full max-w-md mx-auto rounded-lg bg-black/40 border border-white/20 p-3 text-[10px] font-mono text-white/80 max-h-40 overflow-y-auto">
+            <p className="font-bold text-white/90 mb-1">
+              [Auth Debug] 瀏覽器 F12 → Console 可看完整 log
+            </p>
+            {debugLogs.slice(-8).map((line, i) => (
+              <div key={i} className="leading-relaxed break-all">
+                {line}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   );

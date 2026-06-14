@@ -238,7 +238,9 @@ const RegisterForm = ({ onSuccess, storeDomain }) => {
           <button
             type="button"
             onClick={() =>
-              signIn("line", { callbackUrl: `/p/${storeDomain}/account` })
+              signIn("line", {
+                callbackUrl: `${window.location.origin}/p/${storeDomain}/account`,
+              })
             }
             className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#06C755] py-3 text-[14px] font-bold text-white transition hover:brightness-105 shadow-sm"
           >
@@ -547,7 +549,7 @@ export default function PartnerLoginRegisterPage({ store }) {
                           type="button"
                           onClick={() =>
                             signIn("line", {
-                              callbackUrl: `/p/${store.domain}/account`,
+                              callbackUrl: `${window.location.origin}/p/${store.domain}/account`,
                             })
                           }
                           className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#06C755] py-3 text-[14px] font-bold text-white transition hover:brightness-105 shadow-sm"
