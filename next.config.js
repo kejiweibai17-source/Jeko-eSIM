@@ -17,8 +17,9 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   
   workboxOptions: {
     disableDevLogs: true,
-    maximumFileSizeToCacheInBytes: 5000000, // 提高單一檔案快取上限到 5MB
-    // 我們移除了自訂的 runtimeCaching，讓套件使用內建最適合 Next.js 的完美預設值！
+    maximumFileSizeToCacheInBytes: 5000000,
+    // public/index.html 在 Next.js 路由下會 404，precache 失敗會讓 SW 無法 ready（推播卡住）
+    exclude: [/index\.html$/],
   },
 });
 
