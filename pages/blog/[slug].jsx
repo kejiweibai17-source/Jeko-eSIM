@@ -1,7 +1,7 @@
-import Head from "next/head";
 import { useRouter } from "next/router";
 import parse, { domToReact, attributesToProps } from "html-react-parser";
 import Layout from "../Layout";
+import { buildBlogPostSeo } from "../../lib/seo.config";
 import Link from "next/link";
 import ParallaxImage from "../../components/ParallaxImage/page";
 import { ReactLenis } from "@studio-freight/react-lenis";
@@ -195,14 +195,7 @@ export default function PostPage({ post, relatedPosts = [] }) {
   }
 
   // 🌟 處理 SEO 資訊
-  const seo = post.yoast_head_json || {};
-  const canonicalUrl =
-    seo?.canonical || `https://www.wmesim.com/blog/${post.slug}`;
-  const metaDescription =
-    seo?.description ||
-    stripHtml(post.excerpt?.rendered) ||
-    "台灣 eSIM、免簽、自由行教學與最新旅遊資訊";
-
+  const yoast = post.yoast_head_json || {};
   // 🌟 處理首圖 Banner：優先抓取精選圖片 -> 備案抓內文第一張圖 -> 預設圖片
   let bannerImage = "/images/placeholder.jpg";
   if (post._embedded?.["wp:featuredmedia"]?.[0]?.source_url) {
@@ -266,18 +259,17 @@ export default function PostPage({ post, relatedPosts = [] }) {
   const postDate = new Date(post.date);
   const formattedDate = `${postDate.getFullYear()}年${String(postDate.getMonth() + 1)}月${String(postDate.getDate())}日 ${String(postDate.getHours()).padStart(2, "0")}時${String(postDate.getMinutes()).padStart(2, "0")}分`;
 
+  const pageSeo = buildBlogPostSeo(post, bannerImage, yoast);
+
   return (
     <ReactLenis root options={{ lerp: 0.1, duration: 1.2, smoothTouch: false }}>
-      <Layout>
-        <Head>
-          {/* 自動抓取標題，過濾掉 HTML */}
-          <title>
-            {seo?.title || `${stripHtml(post.title.rendered)}｜WMESIM`}
-          </title>
-          <meta name="description" content={metaDescription} />
-          <link rel="canonical" href={canonicalUrl} />
-        </Head>
-
+      <Layout
+        seo={{
+          ...pageSeo,
+          articlePublishedTime: post.date,
+          articleModifiedTime: post.modified || post.date,
+        }}
+      >
         <div className="bg-white min-h-screen pb-24 font-sans text-[#333]">
           {/* =========================================
               滿版視差橫幅

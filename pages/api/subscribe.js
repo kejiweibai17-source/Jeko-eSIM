@@ -102,7 +102,7 @@ export default async function handler(req, res) {
   // 4. 發送「訂閱成功」測試推播
   const payload = JSON.stringify({
     title: "✈️ Jeko eSIM 已就緒",
-    body: "推播通知已成功開啟！流量快用完時我們會立即提醒您喔！",
+    body: "推播已開啟！請在下方綁定 ICCID，流量偏低時我們會提醒您。",
     url: "/data-query/",
   });
 
@@ -121,7 +121,8 @@ export default async function handler(req, res) {
 
   return res.status(201).json({
     success: true,
-    message: "訂閱成功！",
+    message: "訂閱成功！請綁定 ICCID 以啟用流量提醒",
+    needsIccidBind: true,
     testPushOk,
     testPushError,
     userId: userId?.slice(0, 8) || null,

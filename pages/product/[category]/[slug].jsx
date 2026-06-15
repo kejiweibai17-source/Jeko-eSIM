@@ -3,23 +3,14 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/router";
-import Head from "next/head";
 import { useCart } from "../../../components/context/CartContext";
 import Layout from "../../Layout";
+import { buildProductSeo } from "../../../lib/seo.config";
+import MaterialIcon from "../../../components/MaterialIcon";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Maximize2,
-  Search,
-  Play,
-  Pause,
-  LayoutGrid,
-} from "lucide-react";
 import "swiper/css";
 import "swiper/css/navigation";
 import { useSession } from "next-auth/react";
@@ -228,16 +219,13 @@ const applyFeatureLinks = (segment) => {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  return escaped.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_, label, href) => {
-      const safeHref = String(href).trim();
-      if (!/^https?:\/\//i.test(safeHref) && !safeHref.startsWith("/")) {
-        return label;
-      }
-      return `<a href="${safeHref.replace(/"/g, "&quot;")}" class="${FEATURE_LINK_CLASS}">${label}</a>`;
-    },
-  );
+  return escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
+    const safeHref = String(href).trim();
+    if (!/^https?:\/\//i.test(safeHref) && !safeHref.startsWith("/")) {
+      return label;
+    }
+    return `<a href="${safeHref.replace(/"/g, "&quot;")}" class="${FEATURE_LINK_CLASS}">${label}</a>`;
+  });
 };
 
 /** 重點特色：Markdown 連結 + 換行/空行分段 */
@@ -283,10 +271,7 @@ const formatFeatureBulletHtml = (text) => {
 };
 
 function FeatureBulletText({ children, className = "" }) {
-  const html = useMemo(
-    () => formatFeatureBulletHtml(children),
-    [children],
-  );
+  const html = useMemo(() => formatFeatureBulletHtml(children), [children]);
   return (
     <div
       className={`feature-bullet-text ${className}`}
@@ -337,9 +322,7 @@ const findCarrierBullets = (fromMeta, carrierName) => {
 
 /** 依電信商取得重點特色（僅讀 Medusa metadata，不寫死國家/電信商） */
 const resolveIntroBullets = (product, carrierName) => {
-  const fromMeta = parseKeyFeaturesByCarrier(
-    product?.key_features_by_carrier,
-  );
+  const fromMeta = parseKeyFeaturesByCarrier(product?.key_features_by_carrier);
   if (!fromMeta || !Object.keys(fromMeta).length) return [];
   const matched = findCarrierBullets(fromMeta, carrierName);
   if (matched?.length) return matched;
@@ -475,7 +458,7 @@ function ProductImageLightbox({
                 aria-label="搜尋"
                 onClick={() => {}}
               >
-                <Search size={20} strokeWidth={1.5} />
+                <MaterialIcon name="search" size={20} />
               </button>
               {images.length > 1 && (
                 <button
@@ -485,9 +468,9 @@ function ProductImageLightbox({
                   aria-label={isAutoplay ? "暫停輪播" : "自動輪播"}
                 >
                   {isAutoplay ? (
-                    <Pause size={20} strokeWidth={1.5} />
+                    <MaterialIcon name="pause" size={20} />
                   ) : (
-                    <Play size={20} strokeWidth={1.5} />
+                    <MaterialIcon name="play_arrow" size={20} />
                   )}
                 </button>
               )}
@@ -497,7 +480,7 @@ function ProductImageLightbox({
                 className="hidden sm:flex p-2.5 hover:text-white transition-colors"
                 aria-label="縮圖網格"
               >
-                <LayoutGrid size={20} strokeWidth={1.5} />
+                <MaterialIcon name="grid_view" size={20} />
               </button>
               <button
                 type="button"
@@ -505,7 +488,7 @@ function ProductImageLightbox({
                 className="p-2 sm:p-2.5 ml-1 sm:ml-2 text-white hover:text-white/90 transition-colors"
                 aria-label="關閉"
               >
-                <X size={26} strokeWidth={1.25} />
+                <MaterialIcon name="close" size={26} />
               </button>
             </div>
           </header>
@@ -520,9 +503,9 @@ function ProductImageLightbox({
                   className="absolute left-2 sm:left-6 lg:left-10 top-1/2 -translate-y-1/2 z-20 p-2 text-white/50 hover:text-white transition-colors"
                   aria-label="上一張"
                 >
-                  <ChevronLeft
-                    className="w-10 h-10 sm:w-14 sm:h-14"
-                    strokeWidth={1}
+                  <MaterialIcon
+                    name="chevron_left"
+                    className="w-10 h-10 sm:w-14 sm:h-14 text-[40px] sm:text-[56px]"
                   />
                 </button>
                 <button
@@ -531,9 +514,9 @@ function ProductImageLightbox({
                   className="absolute right-2 sm:right-6 lg:right-10 top-1/2 -translate-y-1/2 z-20 p-2 text-white/50 hover:text-white transition-colors"
                   aria-label="下一張"
                 >
-                  <ChevronRight
-                    className="w-10 h-10 sm:w-14 sm:h-14"
-                    strokeWidth={1}
+                  <MaterialIcon
+                    name="chevron_right"
+                    className="w-10 h-10 sm:w-14 sm:h-14 text-[40px] sm:text-[56px]"
                   />
                 </button>
               </>
@@ -636,10 +619,22 @@ function ProductImageLightbox({
 
 function ServiceBenefits() {
   const items = [
-    { icon: "🚚", title: "快速出貨", desc: "下單後 Email 寄送 eSIM QR Code" },
-    { icon: "↩️", title: "安心購買", desc: "依方案政策提供售後支援" },
-    { icon: "🛡️", title: "品質保障", desc: "正規電信線路，穩定連線" },
-    { icon: "💬", title: "終身客服", desc: "LINE 官方客服即時協助" },
+    {
+      icon: "local_shipping",
+      title: "快速出貨",
+      desc: "下單後 Email 寄送 eSIM QR Code",
+    },
+    {
+      icon: "assignment_return",
+      title: "安心購買",
+      desc: "依方案政策提供售後支援",
+    },
+    {
+      icon: "verified_user",
+      title: "品質保障",
+      desc: "正規電信線路，穩定連線",
+    },
+    { icon: "support_agent", title: "終身客服", desc: "LINE 官方客服即時協助" },
   ];
   return (
     <div className="mt-8 pt-6 border-t border-gray-200">
@@ -650,7 +645,11 @@ function ServiceBenefits() {
         style={{ background: "rgba(0, 190, 250, 0.12)" }}
       >
         <span>更多專屬優惠</span>
-        <span className="text-gray-400">›</span>
+        <MaterialIcon
+          name="chevron_right"
+          size={18}
+          className="text-gray-400"
+        />
       </a>
       <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden bg-white">
         {items.map((item) => (
@@ -658,14 +657,21 @@ function ServiceBenefits() {
             key={item.title}
             className="flex items-center gap-3 px-4 py-3.5 text-sm hover:bg-gray-50/80"
           >
-            <span className="text-lg w-8 text-center shrink-0">
-              {item.icon}
+            <span
+              className="w-8 shrink-0 flex items-center justify-center"
+              style={{ color: ANKER_BLUE }}
+            >
+              <MaterialIcon name={item.icon} size={22} />
             </span>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-900">{item.title}</p>
               <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
             </div>
-            <span className="text-gray-300 text-xs">ⓘ</span>
+            <MaterialIcon
+              name="info"
+              size={16}
+              className="text-gray-300 shrink-0"
+            />
           </li>
         ))}
       </ul>
@@ -733,7 +739,7 @@ const Modal = ({
                   onClick={onClose}
                   className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
                 >
-                  ✕
+                  <MaterialIcon name="close" size={22} />
                 </button>
               </div>
               <div className="p-6">{children}</div>
@@ -836,13 +842,39 @@ const ComparisonTable = () => (
           <td className="p-4 font-bold">日本 eSIM AU</td>
           <td className="p-4">KDDI</td>
           <td className="p-4">串流愛好者</td>
-          <td className="p-4 text-xs">✅ 本地網絡 ✅ 支援 TikTok</td>
+          <td className="p-4 text-xs inline-flex items-center gap-1 flex-wrap">
+            <MaterialIcon
+              name="check_circle"
+              size={14}
+              className="text-emerald-600"
+            />{" "}
+            本地網絡
+            <MaterialIcon
+              name="check_circle"
+              size={14}
+              className="text-emerald-600"
+            />{" "}
+            支援 TikTok
+          </td>
         </tr>
         <tr className="bg-slate-50">
           <td className="p-4 font-bold">SoftBank / KDDI 雙網</td>
           <td className="p-4">SB / KDDI</td>
           <td className="p-4">多城市旅行者</td>
-          <td className="p-4 text-xs">✅ 雙網切換 ❌ 無法訪問 TikTok</td>
+          <td className="p-4 text-xs inline-flex items-center gap-1 flex-wrap">
+            <MaterialIcon
+              name="check_circle"
+              size={14}
+              className="text-emerald-600"
+            />{" "}
+            雙網切換
+            <MaterialIcon
+              name="cancel"
+              size={14}
+              className="text-red-500"
+            />{" "}
+            無法訪問 TikTok
+          </td>
         </tr>
       </tbody>
     </table>
@@ -934,14 +966,27 @@ const ProductTabs = ({ product, selectedCarrier }) => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                🇯🇵 關於 {product.name}
+                <MaterialIcon
+                  name="travel_explore"
+                  size={24}
+                  className="text-[#00befa]"
+                />
+                關於 {product.name}
               </h3>
               {isAdmin && (
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className={`px-4 py-2 rounded text-sm font-bold text-white transition-colors ${isEditing ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded text-sm font-bold text-white transition-colors ${isEditing ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
                 >
-                  {isEditing ? "✖ 取消編輯" : "✏️ 編輯內容"}
+                  {isEditing ? (
+                    <>
+                      <MaterialIcon name="close" size={16} /> 取消編輯
+                    </>
+                  ) : (
+                    <>
+                      <MaterialIcon name="edit" size={16} /> 編輯內容
+                    </>
+                  )}
                 </button>
               )}
             </div>
@@ -951,15 +996,15 @@ const ProductTabs = ({ product, selectedCarrier }) => {
                 <div className="flex items-center gap-2 bg-slate-100 p-2 border-b border-gray-200">
                   <button
                     onClick={() => setEditMode("visual")}
-                    className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "visual" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
+                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "visual" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
                   >
-                    👁️ 視覺化編輯
+                    <MaterialIcon name="visibility" size={16} /> 視覺化編輯
                   </button>
                   <button
                     onClick={() => setEditMode("html")}
-                    className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "html" ? "bg-slate-800 text-white shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
+                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "html" ? "bg-slate-800 text-white shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
                   >
-                    ⌨️ HTML 原始碼
+                    <MaterialIcon name="code" size={16} /> HTML 原始碼
                   </button>
                 </div>
                 <div className="relative">
@@ -987,23 +1032,43 @@ const ProductTabs = ({ product, selectedCarrier }) => {
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 shadow-sm"
+                    className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 shadow-sm"
                   >
-                    {isSaving ? "儲存中..." : "💾 儲存並發布"}
+                    {isSaving ? (
+                      "儲存中..."
+                    ) : (
+                      <>
+                        <MaterialIcon
+                          name="save"
+                          size={16}
+                          className="inline mr-1"
+                        />
+                        儲存並發布
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="mb-10 text-slate-600 text-sm leading-relaxed">
                 <div className="space-y-3 mb-6 bg-slate-50 p-5 rounded-xl border border-gray-100">
-                  <h4 className="font-bold text-slate-800 mb-2">
-                    ⚡ {safeCarrier || "此方案"} 專屬特色：
+                  <h4 className="font-bold text-slate-800 mb-2 inline-flex items-center gap-1.5">
+                    <MaterialIcon
+                      name="bolt"
+                      size={18}
+                      className="text-amber-500"
+                    />
+                    {safeCarrier || "此方案"} 專屬特色：
                   </h4>
                   {introBullets.length > 0 ? (
                     <div className="space-y-4">
                       {introBullets.map((point, idx) => (
                         <div key={idx} className="flex gap-2 items-start">
-                          <span className="text-blue-500 mt-0.5 shrink-0">•</span>
+                          <MaterialIcon
+                            name="check_circle"
+                            size={16}
+                            className="text-blue-500 mt-0.5 shrink-0"
+                          />
                           <FeatureBulletText className="text-slate-600 flex-1 min-w-0">
                             {point}
                           </FeatureBulletText>
@@ -1435,10 +1500,19 @@ const ReviewsSection = ({ productId }) => {
                 </div>
               </div>
               <div className="flex items-center gap-3 mb-2 mt-1">
-                <div className="text-[#f56a00] text-lg tracking-widest">
-                  {"★".repeat(r.rating || 5)}
-                  {"☆".repeat(5 - (r.rating || 5))}
-                </div>
+                <span className="inline-flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <MaterialIcon
+                      key={i}
+                      name="star"
+                      size={18}
+                      filled={i < (r.rating || 5)}
+                      className={
+                        i < (r.rating || 5) ? "text-[#f56a00]" : "text-gray-300"
+                      }
+                    />
+                  ))}
+                </span>
                 <div className="text-red-600 font-bold text-xl">
                   {(r.rating || 5).toFixed(1)}
                 </div>
@@ -1462,7 +1536,8 @@ const ReviewsSection = ({ productId }) => {
                     onClick={() => openGallery(r.media_urls, 0)}
                     className="text-xs text-blue-600 font-bold mb-2 flex items-center gap-1 hover:underline cursor-pointer"
                   >
-                    檢查更多 <span>▼</span>
+                    檢查更多
+                    <MaterialIcon name="expand_more" size={14} />
                   </button>
                   <div className="grid grid-cols-4 gap-2">
                     {r.media_urls.slice(0, 4).map((url, i) => (
@@ -1507,7 +1582,7 @@ const ReviewsSection = ({ productId }) => {
                     }
                     className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
                   >
-                    <span>▶</span>{" "}
+                    <MaterialIcon name="reply" size={14} />
                     {replyingTo === r.id ? "取消回覆" : "回覆評論"}
                   </button>
                   {isAdmin && (
@@ -1515,7 +1590,8 @@ const ReviewsSection = ({ productId }) => {
                       onClick={() => handleDelete(r.id, false, r.media_urls)}
                       className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors"
                     >
-                      🗑 刪除
+                      <MaterialIcon name="delete" size={14} />
+                      刪除
                     </button>
                   )}
                 </div>
@@ -1931,7 +2007,10 @@ export async function getStaticProps({ params }) {
 // ==========================================
 // 5. 主頁面 Component
 // ==========================================
-export default function ProductPage({ product: initialProduct, variations = [] }) {
+export default function ProductPage({
+  product: initialProduct,
+  variations = [],
+}) {
   const { addToCart } = useCart();
   const router = useRouter();
   const [product, setProduct] = useState(initialProduct);
@@ -2192,12 +2271,14 @@ export default function ProductPage({ product: initialProduct, variations = [] }
 
   if (router.isFallback || !product) return <Layout>載入中...</Layout>;
 
-  return (
-    <Layout>
-      <Head>
-        <title>{`${currentVariation?.title || product.name} | jeko eSIM 街口eSIM`}</title>
-      </Head>
+  const pageSeo = buildProductSeo(
+    product,
+    currentVariation,
+    router.query.category,
+  );
 
+  return (
+    <Layout seo={pageSeo}>
       <CompatibilityModal
         isOpen={isCompatOpen}
         onClose={() => setIsCompatOpen(false)}
@@ -2218,7 +2299,7 @@ export default function ProductPage({ product: initialProduct, variations = [] }
           productName={currentVariation?.title || product.name}
         />
 
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pb-16 lg:pb-20">
+        <div className="max-w-[1280px] sm:mt-20 mx-auto px-4 sm:px-6 pb-16 lg:pb-20">
           <section
             id="purchase-section"
             className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-8 lg:gap-12 mb-16 lg:mb-20 pt-6"
@@ -2255,7 +2336,7 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                       aria-label="上一張"
                       className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md border border-gray-100 flex items-center justify-center text-gray-600 hover:bg-white transition-colors opacity-0 group-hover:opacity-100 sm:opacity-100"
                     >
-                      <ChevronLeft size={22} />
+                      <MaterialIcon name="chevron_left" size={22} />
                     </button>
                     <button
                       type="button"
@@ -2266,7 +2347,7 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                       aria-label="下一張"
                       className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md border border-gray-100 flex items-center justify-center text-gray-600 hover:bg-white transition-colors opacity-0 group-hover:opacity-100 sm:opacity-100"
                     >
-                      <ChevronRight size={22} />
+                      <MaterialIcon name="chevron_right" size={22} />
                     </button>
                   </>
                 )}
@@ -2277,7 +2358,7 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                   className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/90 border border-gray-100 shadow-sm flex items-center justify-center text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity sm:opacity-100"
                   aria-label="放大檢視"
                 >
-                  <Maximize2 size={16} />
+                  <MaterialIcon name="fullscreen" size={16} />
                 </button>
 
                 <Swiper
@@ -2362,7 +2443,11 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                       : "text-gray-600 hover:text-slate-900"
                   }`}
                 >
-                  <span className="w-3.5 h-3.5 border border-current rounded-sm opacity-80" />
+                  <MaterialIcon
+                    name="view_agenda"
+                    size={14}
+                    className="opacity-80"
+                  />
                   概覽
                 </button>
                 <button
@@ -2379,7 +2464,7 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                       : "text-gray-600 hover:text-slate-900"
                   }`}
                 >
-                  <span className="text-[10px]">▶</span>
+                  <MaterialIcon name="install_mobile" size={14} />
                   安裝說明
                 </button>
               </div>
@@ -2404,8 +2489,9 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                 <button
                   type="button"
                   onClick={() => setIsCompatOpen(true)}
-                  className="text-xs font-semibold text-gray-600 border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 whitespace-nowrap"
                 >
+                  <MaterialIcon name="phonelink_setup" size={16} />
                   檢查相容性
                 </button>
               </div>
@@ -2418,7 +2504,11 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                 href="#product-reviews"
                 className="inline-flex items-center gap-1.5 text-sm text-[#00befa] font-semibold hover:underline mb-5 w-fit"
               >
-                <span className="text-amber-400 tracking-tighter">★★★★★</span>
+                <span className="inline-flex items-center gap-0.5 text-amber-400">
+                  {[...Array(5)].map((_, i) => (
+                    <MaterialIcon key={i} name="star" size={16} filled />
+                  ))}
+                </span>
                 查看用戶評論
               </a>
 
@@ -2431,11 +2521,18 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                       : "text-gray-300"
                   }`}
                 >
-                  {isAllOptionsSelected && currentVariation
-                    ? currentVariation.price > 0
-                      ? `NT$${currentVariation.price}`
-                      : "⚠️ 尚未定價"
-                    : "請選擇規格"}
+                  {isAllOptionsSelected && currentVariation ? (
+                    currentVariation.price > 0 ? (
+                      `NT$${currentVariation.price}`
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <MaterialIcon name="warning" size={20} />
+                        尚未定價
+                      </span>
+                    )
+                  ) : (
+                    "請選擇規格"
+                  )}
                 </p>
                 {priceSavings > 0 && (
                   <span className="inline-block bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-md">
@@ -2446,10 +2543,11 @@ export default function ProductPage({ product: initialProduct, variations = [] }
               <p className="text-sm mb-5 -mt-2">
                 <a
                   href="/login"
-                  className="font-semibold hover:underline"
+                  className="inline-flex items-center gap-1 font-semibold hover:underline"
                   style={{ color: ANKER_BLUE }}
                 >
-                  登入會員享更多優惠 →
+                  登入會員享更多優惠
+                  <MaterialIcon name="arrow_forward" size={16} />
                 </a>
               </p>
 
@@ -2490,9 +2588,9 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                 >
                   <span>重點特色</span>
                   <span
-                    className={`text-gray-400 transition-transform ${featuresOpen ? "rotate-180" : ""}`}
+                    className={`text-gray-400 transition-transform inline-flex ${featuresOpen ? "rotate-180" : ""}`}
                   >
-                    ▾
+                    <MaterialIcon name="expand_more" size={22} />
                   </span>
                 </button>
                 <AnimatePresence initial={false}>
@@ -2505,8 +2603,13 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                     >
                       {introBullets.length > 0 ? (
                         introBullets.map((line, i) => (
-                          <li key={i} className="flex gap-2 items-start list-none">
-                            <span className="text-[#00befa] shrink-0 mt-0.5">•</span>
+                          <li
+                            key={i}
+                            className="flex gap-2 items-start list-none"
+                          >
+                            <span className="text-[#00befa] shrink-0 mt-0.5">
+                              •
+                            </span>
                             <FeatureBulletText className="flex-1 min-w-0">
                               {line}
                             </FeatureBulletText>
@@ -2620,32 +2723,52 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                     className="my-5 p-4 rounded-xl grid grid-cols-2 gap-y-3 gap-x-4 text-sm bg-slate-50 border border-gray-100"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className="text-base">🌍</span>
+                      <MaterialIcon
+                        name="public"
+                        size={20}
+                        className="text-slate-500"
+                      />
                       <span className="font-semibold text-slate-700">
                         {currentVariation.attributes?.ip_type || "日本 IP"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2.5">
-                      <span className="text-base">💎</span>
+                      <MaterialIcon
+                        name="diamond"
+                        size={20}
+                        className="text-slate-500"
+                      />
                       <span className="font-semibold text-slate-700">
                         {currentVariation.attributes?.route_type || "日本原生"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2.5">
-                      <span className="text-base">📶</span>
+                      <MaterialIcon
+                        name="signal_cellular_alt"
+                        size={20}
+                        className="text-slate-500"
+                      />
                       <span className="font-semibold text-slate-700">
                         {currentVariation.attributes?.network || "4G / LTE"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2.5">
-                      <span className="text-base">⚡</span>
+                      <MaterialIcon
+                        name="bolt"
+                        size={20}
+                        className="text-slate-500"
+                      />
                       <span className="font-semibold text-slate-700">
                         {currentVariation.attributes?.speed_rule ||
                           "依 FUP 規範限制"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2.5 col-span-2 pt-3 border-t border-gray-100">
-                      <span className="text-base">✓</span>
+                      <MaterialIcon
+                        name="check_circle"
+                        size={20}
+                        className="text-emerald-600 shrink-0"
+                      />
                       <span className="font-semibold text-slate-600 text-xs leading-relaxed">
                         支援：{" "}
                         {currentVariation.attributes?.apps ||
@@ -2666,7 +2789,7 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                     className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-50"
                     aria-label="減少數量"
                   >
-                    －
+                    <MaterialIcon name="remove" size={20} />
                   </button>
                   <div className="flex-1 h-11 flex items-center justify-center font-bold text-slate-800 border-x border-gray-100">
                     {quantity}
@@ -2677,7 +2800,7 @@ export default function ProductPage({ product: initialProduct, variations = [] }
                     className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-50"
                     aria-label="增加數量"
                   >
-                    ＋
+                    <MaterialIcon name="add" size={20} />
                   </button>
                 </div>
               </div>
@@ -2779,9 +2902,11 @@ export default function ProductPage({ product: initialProduct, variations = [] }
               <button
                 type="button"
                 onClick={() => setIsEstimatorOpen(true)}
-                className="mt-4 w-full text-center text-xs font-semibold text-gray-500 hover:text-[#00befa] transition-colors"
+                className="mt-4 w-full inline-flex items-center justify-center gap-1 text-xs font-semibold text-gray-500 hover:text-[#00befa] transition-colors"
               >
-                不確定流量？開啟流量試算器 →
+                <MaterialIcon name="calculate" size={16} />
+                不確定流量？開啟流量試算器
+                <MaterialIcon name="arrow_forward" size={14} />
               </button>
 
               <ServiceBenefits />

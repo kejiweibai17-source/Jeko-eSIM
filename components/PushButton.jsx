@@ -22,7 +22,13 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
-export default function PushButton({ className = "", showDebugPanel = true }) {
+export default function PushButton({
+  className = "",
+  showDebugPanel = true,
+  onSubscribed,
+  requireLogin = false,
+  theme = "default",
+}) {
   const { token, user } = useUser();
 
   const [status, setStatus] = useState("idle"); // idle | warming | loading | subscribed | unsupported | error
@@ -91,13 +97,14 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
   const handleSubscribe = async () => {
     setLastError(null);
 
-    if (!token) {
+    if (requireLogin && !token) {
       addLog("❌ 未登入");
       alert("請先登入會員，才能開啟流量提醒通知喔！");
       return;
     }
 
-    addLog(`已登入 ${user?.email || user?.id}`);
+    if (token) addLog(`已登入 ${user?.email || user?.id}`);
+    else addLog("訪客模式訂閱推播");
     setStatus("loading");
 
     try {
@@ -139,7 +146,7 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(subscription),
         }),
@@ -157,6 +164,7 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
       addLog("✅ 推播訂閱完成");
       setStatus("subscribed");
       setCurrentStep("");
+      onSubscribed?.({ subscription, needsIccidBind: true });
     } catch (err) {
       pushError("訂閱失敗", err);
       const msg = err?.message || String(err);
@@ -190,29 +198,49 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
   const isWarming = status === "warming";
   const isError = status === "error";
 
+  const isBanner = theme === "banner";
+
   return (
-    <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+    <div className={`flex flex-col items-end gap-2 w-full sm:w-auto ${isBanner ? "items-center sm:items-end" : ""}`}>
       <button
         onClick={handleSubscribe}
         disabled={isSubscribed || isLoading || isWarming}
-        className={`px-6 py-3 rounded-full font-bold text-white transition-all shadow-md active:scale-95 ${
+        className={`px-6 py-3 rounded-full font-bold transition-all shadow-md active:scale-95 whitespace-nowrap ${
           isSubscribed
-            ? "bg-green-500 cursor-default"
+            ? isBanner
+              ? "bg-white/25 border border-white/50 text-white cursor-default"
+              : "bg-green-500 text-white cursor-default"
             : isLoading || isWarming
-            ? "bg-slate-400 cursor-wait"
+            ? isBanner
+              ? "bg-white/40 text-white cursor-wait"
+              : "bg-slate-400 text-white cursor-wait"
             : isError
-            ? "bg-orange-500 hover:bg-orange-600"
-            : "bg-[#0A6CD0] hover:bg-blue-700"
+            ? isBanner
+              ? "bg-white text-[#1d5cc5] hover:bg-white/90"
+              : "bg-orange-500 hover:bg-orange-600 text-white"
+            : isBanner
+            ? "bg-white text-[#1d5cc5] hover:bg-white/90"
+            : "bg-[#0A6CD0] hover:bg-blue-700 text-white"
         } ${className}`}
       >
         {isSubscribed
-          ? "🔔 已開啟流量提醒通知"
+          ? isBanner
+            ? "已開啟流量提醒"
+            : "🔔 已開啟流量提醒通知"
           : isWarming
-          ? "⏳ 準備推播服務…"
+          ? isBanner
+            ? "準備推播服務…"
+            : "⏳ 準備推播服務…"
           : isLoading
-          ? `⏳ ${currentStep}…`
+          ? isBanner
+            ? `${currentStep}…`
+            : `⏳ ${currentStep}…`
           : isError
-          ? "🔄 重試開啟推播"
+          ? isBanner
+            ? "重試開啟推播"
+            : "🔄 重試開啟推播"
+          : isBanner
+          ? "開啟流量提醒"
           : swReady
           ? "開啟流量提醒通知 ✈️"
           : "開啟流量提醒通知 ✈️"}

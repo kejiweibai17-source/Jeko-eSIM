@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import Head from "next/head.js";
 import Layout from "../../Layout.js";
+import { buildCategorySeo } from "../../../lib/seo.config";
 import CountryFilter from "../../../components/NavbarTestSideBarToggle.jsx";
 import SwiperCarousel from "../../../components/SwiperCarousel/SwiperCard.jsx";
 import FilterSideBar from "../../../components/FilterSideBar";
@@ -189,6 +189,11 @@ const CategoryPage = ({ currentCategory, categories, initialProducts }) => {
   const currentProducts = filteredProducts.slice(startIndex, endIndex);
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
 
+  const pageSeo = useMemo(
+    () => buildCategorySeo(currentCategory, initialProducts),
+    [currentCategory, initialProducts],
+  );
+
   if (router.isFallback)
     return (
       <Layout>
@@ -199,18 +204,7 @@ const CategoryPage = ({ currentCategory, categories, initialProducts }) => {
     );
 
   return (
-    <Layout>
-      <Head>
-        <title>{currentCategory?.name} eSIM 推薦 | 極客網頁設計</title>
-        <meta
-          name="description"
-          content={
-            currentCategory?.description ||
-            `精選 ${currentCategory?.name} 旅遊 eSIM，隨插即用。`
-          }
-        />
-      </Head>
-
+    <Layout seo={pageSeo}>
       <div className="flex flex-col bg-[#f9f9fa]">
         <section className="section_Hero w-full mx-auto">
           <Slider />

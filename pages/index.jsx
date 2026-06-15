@@ -664,7 +664,7 @@ export default function Home() {
  
         </section> */}
 
-        <section className="relative rounded-[32px] z-[99] bg-white/40 border border-white/30 backdrop-blur-[25px] shadow-[0_30px_80px_rgba(36,57,69,0.15)] px-4 sm:px-10 mx-auto mt-[50px] w-[95%] lg:w-[96%] py-[60px] lg:py-[100px]">
+        <section className="relative rounded-[32px] z-[99] bg-white/40 border border-white/30 backdrop-blur-[25px] shadow-[0_30px_80px_rgba(36,57,69,0.15)] px-4 sm:px-10 mx-auto mt-[50px] w-[95%] lg:w-[96%] pt-[30px] lg:py-[100px]">
           <MaskText blockColor="#30AE99">
             <div className="main-title max-w-[1000px] mx-auto flex justify-center flex-col items-center text-center">
               <h2 className="text-3xl lg:text-5xl font-bold">如何使用 eSIM?</h2>
@@ -881,7 +881,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="bg-[#147AD7] w-full overflow-hidden py-20">
+        <section className="bg-[#147AD7] w-full overflow-hidden py-2 sm:py-20">
           <div className="mt-8 lg:mt-5">
             <Carousel />
           </div>
