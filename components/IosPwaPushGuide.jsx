@@ -1,287 +1,136 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  DevicePhoneMobileIcon,
   ArrowUpOnSquareIcon,
   PlusCircleIcon,
-  HomeIcon,
   BellAlertIcon,
-  CheckCircleIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
 } from "@heroicons/react/24/outline";
 import { getBrowserContext, isStandalonePWA } from "../lib/pushSupport";
+import PushButton from "./PushButton";
 
-const STORAGE_KEY = "jeko-ios-pwa-guide-done";
-
-const GUIDE_STEPS = [
+const STEPS = [
   {
-    id: 1,
-    icon: DevicePhoneMobileIcon,
-    title: "確認您正在使用 iPhone 或 iPad",
-    desc: "推播功能需在 iPhone / iPad 上操作（電腦請改用 Chrome）",
-    tip: "若您正在看這段文字，代表裝置正確 ✓",
+    n: 1,
+    title: "加入主畫面",
+    desc: "Safari 下方點「分享」⎙ →「加入主畫面」→ 右上角「加入」",
   },
   {
-    id: 2,
-    icon: ArrowUpOnSquareIcon,
-    title: "點 Safari 畫面「下方」的分享按鈕",
-    desc: "分享圖示是一個方框 ⬆️ 加一支箭頭，在網址列下方或螢幕最底部中間",
-    tip: "找不到？請確認是用 Safari 開啟，不是 Chrome 或 LINE 內建瀏覽器",
-    visual: "share",
+    n: 2,
+    title: "從主畫面開啟",
+    desc: "關閉 Safari，點主畫面的 Jeko 圖示（沒有網址列＝成功）",
   },
   {
-    id: 3,
-    icon: PlusCircleIcon,
-    title: "在選單中向下滑，點「加入主畫面」",
-    desc: "若沒看到，繼續往下滑；圖示是 ➕ 在方框裡",
-    tip: "選單很長時，「加入主畫面」通常在中段偏下",
-    visual: "add-home",
-  },
-  {
-    id: 4,
-    icon: HomeIcon,
-    title: "點右上角藍色「加入」",
-    desc: "可修改名稱為「Jeko eSIM」，再按「加入」",
-    tip: "完成後 Safari 會短暫閃一下，代表成功",
-    visual: "confirm",
-  },
-  {
-    id: 5,
-    icon: DevicePhoneMobileIcon,
-    title: "按 Home 鍵，從主畫面開啟 Jeko",
-    desc: "在主畫面找到 Jeko 圖示，點它開啟（不是再開 Safari 分頁）",
-    tip: "從主畫面開啟時，上方不會有 Safari 網址列，代表成功",
-    visual: "launch",
-  },
-  {
-    id: 6,
-    icon: BellAlertIcon,
-    title: "登入會員 → 回到「查詢用量」→ 開啟推播",
-    desc: "必須在從主畫面開啟的 App 裡登入，再點「開啟流量提醒通知」",
-    tip: "允許通知時請按「允許」",
-    visual: "push",
+    n: 3,
+    title: "開啟推播",
+    desc: "登入會員 → 點「開啟流量提醒通知」→ 允許通知",
   },
 ];
 
-function ShareButtonMockup() {
-  return (
-    <div className="mt-3 flex justify-center">
-      <div className="w-[200px] rounded-2xl border-2 border-stone-300 bg-stone-100 p-2 shadow-inner">
-        <div className="h-6 rounded bg-white/80 mb-2" />
-        <div className="flex justify-center gap-6 py-2 border-t border-stone-200">
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="w-10 h-10 rounded-lg bg-[#0A6CD0] flex items-center justify-center ring-2 ring-[#FF8C00] ring-offset-2">
-              <ArrowUpOnSquareIcon className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-[9px] font-bold text-[#FF8C00]">分享 ← 點這裡</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5 opacity-40">
-            <div className="w-10 h-10 rounded-lg bg-stone-300" />
-            <span className="text-[9px] text-stone-400">其他</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AddHomeMockup() {
-  return (
-    <div className="mt-3 mx-auto max-w-[240px] rounded-xl border border-stone-200 bg-white p-2 text-[10px] shadow-sm">
-      <div className="py-1.5 px-2 text-stone-400 border-b">⋯ 更多選項</div>
-      <div className="py-2 px-2 flex items-center gap-2 bg-[#F0F7FF] rounded-lg ring-2 ring-[#0A6CD0] font-bold text-[#0A6CD0]">
-        <PlusCircleIcon className="w-5 h-5 shrink-0" />
-        加入主畫面 ← 點這個
-      </div>
-      <div className="py-1.5 px-2 text-stone-400">書籤</div>
-    </div>
-  );
-}
-
-function LaunchMockup() {
-  return (
-    <div className="mt-3 flex justify-center gap-3">
-      <div className="flex flex-col items-center gap-1">
-        <img src="/icons/icon-192x192.png" alt="Jeko" className="w-14 h-14 rounded-2xl shadow-md ring-2 ring-[#0A6CD0]" />
-        <span className="text-[9px] font-bold text-[#0A6CD0]">Jeko eSIM</span>
-        <span className="text-[8px] text-[#FF8C00]">點圖示開啟</span>
-      </div>
-    </div>
-  );
-}
-
 export default function IosPwaPushGuide({ className = "" }) {
-  const [activeStep, setActiveStep] = useState(1);
-  const [doneSteps, setDoneSteps] = useState([]);
-  const [faqOpen, setFaqOpen] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  const checkInstalled = () => {
+    setInstalled(isStandalonePWA());
+  };
 
   useEffect(() => {
-    const ctx = getBrowserContext();
-    setIsIOS(ctx.isIOS);
-
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      if (Array.isArray(saved)) setDoneSteps(saved);
-    } catch {
-      /* ignore */
-    }
-
-    if (isStandalonePWA()) {
-      setActiveStep(6);
-      markDone(5);
-    }
+    setIsIOS(getBrowserContext().isIOS);
+    checkInstalled();
+    const onVis = () => checkInstalled();
+    window.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
+    return () => {
+      window.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onVis);
+    };
   }, []);
-
-  const markDone = (stepId) => {
-    setDoneSteps((prev) => {
-      const next = prev.includes(stepId) ? prev : [...prev, stepId];
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-    if (stepId < GUIDE_STEPS.length) {
-      setActiveStep(stepId + 1);
-    }
-  };
-
-  const resetGuide = () => {
-    setDoneSteps([]);
-    setActiveStep(1);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
-  };
 
   if (!isIOS) return null;
 
-  const progress = Math.round((doneSteps.length / GUIDE_STEPS.length) * 100);
-  const allDone = doneSteps.length >= GUIDE_STEPS.length - 1; // step 6 is final action
+  // 已從主畫面 App 開啟 → 直接顯示推播按鈕
+  if (installed) {
+    return (
+      <div className={className}>
+        <div className="mb-3 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-center">
+          <p className="text-sm font-bold text-green-800">✅ App 已安裝，可以開啟推播了</p>
+        </div>
+        <PushButton showDebugPanel={false} />
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="rounded-2xl border-2 border-[#0A6CD0]/30 bg-gradient-to-b from-[#F0F7FF] to-white overflow-hidden">
-        {/* Header */}
-        <div className="bg-[#0A6CD0] px-4 py-3 text-white">
-          <p className="text-xs font-medium opacity-90">iPhone 推播安裝教學</p>
-          <p className="text-base font-black mt-0.5">3 分鐘完成 · 照著做就好</p>
-          <div className="mt-2 h-1.5 rounded-full bg-white/30 overflow-hidden">
+      <div className="rounded-2xl border border-[#0A6CD0]/25 bg-white overflow-hidden shadow-sm">
+        <div className="bg-[#0A6CD0] px-4 py-3 text-white text-center">
+          <p className="text-lg font-black">2 步驟安裝 · 即可收推播</p>
+          <p className="text-xs opacity-90 mt-0.5">iPhone 需先加入主畫面（約 30 秒）</p>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {STEPS.slice(0, 2).map((step) => (
             <div
-              className="h-full bg-[#FF8C00] transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="text-[10px] mt-1 opacity-80">進度 {doneSteps.length} / {GUIDE_STEPS.length} 步</p>
-        </div>
-
-        {/* Steps */}
-        <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto">
-          {GUIDE_STEPS.map((step) => {
-            const Icon = step.icon;
-            const isDone = doneSteps.includes(step.id);
-            const isActive = activeStep === step.id;
-
-            return (
-              <div
-                key={step.id}
-                className={`rounded-xl border p-3 transition-all ${
-                  isDone
-                    ? "border-green-200 bg-green-50/50"
-                    : isActive
-                    ? "border-[#0A6CD0] bg-white shadow-md ring-1 ring-[#0A6CD0]/20"
-                    : "border-stone-100 bg-stone-50/50 opacity-70"
-                }`}
-              >
-                <div className="flex gap-3">
-                  <div
-                    className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-black ${
-                      isDone
-                        ? "bg-green-500 text-white"
-                        : isActive
-                        ? "bg-[#0A6CD0] text-white"
-                        : "bg-stone-200 text-stone-500"
-                    }`}
-                  >
-                    {isDone ? <CheckCircleIcon className="w-5 h-5" /> : step.id}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-stone-900 leading-snug">{step.title}</p>
-                    <p className="text-xs text-stone-600 mt-1 leading-relaxed">{step.desc}</p>
-                    {step.tip && (
-                      <p className="text-[11px] text-[#0A6CD0] mt-1.5 bg-[#F0F7FF] rounded-lg px-2 py-1">
-                        💡 {step.tip}
-                      </p>
-                    )}
-                    {isActive && step.visual === "share" && <ShareButtonMockup />}
-                    {isActive && step.visual === "add-home" && <AddHomeMockup />}
-                    {isActive && step.visual === "launch" && <LaunchMockup />}
-                  </div>
-                </div>
-
-                {isActive && !isDone && (
-                  <button
-                    type="button"
-                    onClick={() => markDone(step.id)}
-                    className="mt-3 w-full py-2.5 rounded-xl bg-[#0A6CD0] hover:bg-[#0851A8] text-white text-sm font-bold transition-colors"
-                  >
-                    ✓ 我完成了，下一步
-                  </button>
-                )}
+              key={step.n}
+              className="flex gap-3 rounded-xl bg-[#F0F7FF] border border-[#0A6CD0]/15 p-3"
+            >
+              <span className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#0A6CD0] text-white text-sm font-black">
+                {step.n}
+              </span>
+              <div>
+                <p className="text-sm font-bold text-stone-900">{step.title}</p>
+                <p className="text-xs text-stone-600 mt-0.5 leading-relaxed">{step.desc}</p>
               </div>
-            );
-          })}
+            </div>
+          ))}
+
+          {/* 步驟 1 示意 */}
+          <div className="rounded-xl border border-dashed border-[#0A6CD0]/40 bg-stone-50 p-3">
+            <p className="text-[11px] font-bold text-[#0A6CD0] text-center mb-2">
+              分享按鈕在這裡 ↓
+            </p>
+            <div className="mx-auto max-w-[200px] rounded-xl border border-stone-200 bg-white p-2 shadow-sm">
+              <div className="h-5 rounded bg-stone-100 mb-2" />
+              <div className="flex justify-center py-2 border-t border-stone-100">
+                <div className="flex flex-col items-center">
+                  <div className="h-9 w-9 rounded-lg bg-[#0A6CD0] flex items-center justify-center ring-2 ring-[#FF8C00]">
+                    <ArrowUpOnSquareIcon className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-[9px] font-bold text-[#FF8C00] mt-1">分享</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-stone-500 text-center mt-2 flex items-center justify-center gap-1">
+              <PlusCircleIcon className="h-3.5 w-3.5 text-[#0A6CD0]" />
+              選單裡找「加入主畫面」
+            </p>
+          </div>
+
+          <div className="flex gap-3 rounded-xl bg-stone-50 border border-stone-100 p-3 opacity-80">
+            <span className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-stone-300 text-white text-sm font-black">
+              3
+            </span>
+            <div className="flex items-center gap-2">
+              <BellAlertIcon className="h-5 w-5 text-[#0A6CD0] shrink-0" />
+              <p className="text-xs text-stone-600 leading-relaxed">
+                安裝完成後，從主畫面開啟本站 → 登入 → 開啟推播
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-stone-100 px-4 py-3 bg-stone-50/80">
-          {isStandalonePWA() ? (
-            <div className="text-center">
-              <p className="text-sm font-bold text-green-700">✅ 您已從主畫面 App 開啟！</p>
-              <p className="text-xs text-stone-600 mt-1">請登入後點上方「開啟流量提醒通知」</p>
-            </div>
-          ) : allDone ? (
-            <div className="text-center">
-              <p className="text-sm font-bold text-[#0A6CD0]">請從主畫面 Jeko 圖示重新開啟本站</p>
-              <p className="text-xs text-stone-500 mt-1">關閉 Safari 分頁，改點主畫面 App</p>
-            </div>
-          ) : (
-            <p className="text-[11px] text-stone-500 text-center">
-              每完成一步請按「我完成了」；全部做完後從主畫面開啟
-            </p>
-          )}
-
+        <div className="px-4 pb-4 space-y-2">
           <button
             type="button"
-            onClick={() => setFaqOpen(!faqOpen)}
-            className="mt-2 w-full flex items-center justify-center gap-1 text-xs text-stone-500 hover:text-[#0A6CD0]"
+            onClick={checkInstalled}
+            className="w-full py-3 rounded-xl bg-[#0A6CD0] hover:bg-[#0851A8] text-white text-sm font-bold shadow-md active:scale-[0.98] transition-all"
           >
-            找不到按鈕？常見問題
-            {faqOpen ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+            我已從主畫面開啟，繼續開推播 →
           </button>
-
-          {faqOpen && (
-            <div className="mt-2 space-y-2 text-[11px] text-stone-600 bg-white rounded-lg p-3 border border-stone-100">
-              <p><strong>Q：沒有「分享」按鈕？</strong><br />請用 Safari 開啟，網址列要在螢幕下方（iOS 15+ 預設位置）</p>
-              <p><strong>Q：沒有「加入主畫面」？</strong><br />在分享選單中繼續往下滑；或點「編輯動作」把它加進常用</p>
-              <p><strong>Q：加了主畫面還是不行？</strong><br />請確認是點主畫面圖示開啟，不是從 Safari 書籤進入</p>
-              <p><strong>Q：可以用 Chrome 嗎？</strong><br />iPhone 上請用 Safari 加入主畫面；電腦請用 Chrome 直接訂閱</p>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={resetGuide}
-            className="mt-2 w-full text-[10px] text-stone-400 hover:text-stone-600"
-          >
-            重新開始教學
-          </button>
+          <p className="text-[10px] text-stone-400 text-center">
+            完成步驟 1–2 後，從主畫面 Jeko 圖示進入，再按上方按鈕
+          </p>
         </div>
       </div>
     </div>

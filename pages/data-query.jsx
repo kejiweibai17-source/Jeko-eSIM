@@ -257,7 +257,7 @@ export default function DataQueryPage() {
             <div className="mb-4">
               <p className="font-black text-stone-900 text-sm">流量快用完時通知我</p>
               <p className="text-xs text-stone-500 mt-1">
-                電腦 Chrome 可直接開啟；iPhone 請依下方教學安裝到主畫面
+                iPhone 請先「加入主畫面」；電腦可直接開啟推播
               </p>
             </div>
             <PushNotificationSection />
