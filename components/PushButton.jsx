@@ -11,6 +11,7 @@ import {
   warmupServiceWorker,
   subscribePushWithRetry,
 } from "../lib/pushDebug";
+import { detectPushSupport } from "../lib/pushSupport";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -32,6 +33,7 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
   const [currentStep, setCurrentStep] = useState("");
   const [serverConfig, setServerConfig] = useState(null);
   const [clientEnv, setClientEnv] = useState(null);
+  const [supportInfo, setSupportInfo] = useState(null);
   const warmupStarted = useRef(false);
 
   const addLog = useCallback((msg) => {
@@ -46,12 +48,14 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
     warmupStarted.current = true;
 
     const init = async () => {
-      const supported = "serviceWorker" in navigator && "PushManager" in window;
-      setIsSupported(supported);
+      const support = await detectPushSupport();
+      setSupportInfo(support);
+      setIsSupported(support.supported);
 
-      if (!supported) {
+      if (!support.supported) {
         setStatus("unsupported");
-        addLog("❌ 不支援推播");
+        addLog(`❌ ${support.title}`);
+        if (support.hint) addLog(support.hint);
         return;
       }
 
@@ -165,8 +169,19 @@ export default function PushButton({ className = "", showDebugPanel = true }) {
   };
 
   if (!isSupported || status === "unsupported") {
+    const info = supportInfo || {};
+    // iOS 教學由 PushNotificationSection / IosPwaPushGuide 處理
+    if (info.reason === "ios-needs-pwa") return null;
+
     return showDebugPanel ? (
-      <div className="text-xs text-red-600 font-mono">此瀏覽器不支援 Web Push</div>
+      <div className="w-full sm:max-w-md rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left">
+        <p className="text-sm font-bold text-amber-900">
+          {info.title || "此瀏覽器不支援 Web Push"}
+        </p>
+        {info.hint && (
+          <p className="text-xs text-amber-800 mt-1.5 leading-relaxed">{info.hint}</p>
+        )}
+      </div>
     ) : null;
   }
 

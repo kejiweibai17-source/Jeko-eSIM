@@ -15,7 +15,7 @@ import {
   ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
-import PushButton from "@/components/PushButton";
+import PushNotificationSection from "@/components/PushNotificationSection";
 
 /* ── 流量對照資料（參考 Yesim / Saily / Monito 業界估算） ── */
 const DATA_PLANS = [
@@ -253,14 +253,14 @@ export default function DataQueryPage() {
           </div>
 
           {/* ── 推播訂閱 ── */}
-          <div className="mb-14 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#F0F7FF] border border-[#0A6CD0]/20 rounded-2xl px-6 py-5">
-            <div>
+          <div className="mb-14 bg-[#F0F7FF] border border-[#0A6CD0]/20 rounded-2xl px-6 py-5">
+            <div className="mb-4">
               <p className="font-black text-stone-900 text-sm">流量快用完時通知我</p>
               <p className="text-xs text-stone-500 mt-1">
-                登入後開啟推播，剩餘流量不足時會收到提醒（電腦 Chrome 不需安裝 PWA）
+                電腦 Chrome 可直接開啟；iPhone 請依下方教學安裝到主畫面
               </p>
             </div>
-            <PushButton className="shrink-0" />
+            <PushNotificationSection />
           </div>
 
           {/* ── 注意事項橫幅（參照 Anker 禮品卡橫幅） ── */}
