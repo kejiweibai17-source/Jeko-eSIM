@@ -1,7 +1,8 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import Link from "next/link"; // 🌟 新增引入 next/link
+import Link from "next/link";
+import MobileCardCarousel from "./MobileCardCarousel";
 
 /* ========== 共用：滾動進場（大距離、超柔順；與 page.jsx 同步） ========== */
 function FadeUp({
@@ -75,40 +76,46 @@ function JobCard({
   tags = [],
   link = "#",
   delay = 0,
+  noAnimation = false,
 }) {
+  const card = (
+    <Link
+      href={link}
+      className="group relative block overflow-hidden rounded-[24px] bg-white border border-[#E6EFF6] shadow-sm h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#0BAFD7]/10 hover:border-[#0BAFD7]/30"
+    >
+      <div className="pointer-events-none absolute -bottom-8 -right-8 h-28 w-28 rounded-tl-full bg-[#0BAFD7]/85 transition-transform duration-500 group-hover:scale-110" />
+
+      <div className="relative z-10 p-6 md:p-7 flex flex-col h-full">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {pills.map((p, i) => (
+            <LabelPill key={i} text={p.text} color={p.color} />
+          ))}
+        </div>
+
+        <h3 className="text-[22px] leading-[1.5] font-extrabold text-[#2C5164] mb-3 transition-colors duration-300 group-hover:text-[#0BAFD7]">
+          {title}
+        </h3>
+        <p className="text-[14px] leading-relaxed text-[#5B7382] mb-6 flex-grow">
+          {desc}
+        </p>
+        <div className="flex flex-wrap mt-auto">
+          {tags.map((t, i) => (
+            <TAG key={i} bg="#34414D" color="#ffffff">
+              #{t}
+            </TAG>
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
+
+  if (noAnimation) {
+    return <div className="h-full">{card}</div>;
+  }
+
   return (
     <FadeUp delay={delay} amount={0.25} className="h-full">
-      {/* 🌟 將 div 改為 Link，並加入 hover 互動效果 (浮起、陰影加深、group 控制) */}
-      <Link
-        href={link}
-        className="group relative block overflow-hidden rounded-[24px] bg-white border border-[#E6EFF6] shadow-sm h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#0BAFD7]/10 hover:border-[#0BAFD7]/30"
-      >
-        {/* 右下裝飾 (Hover 時微微放大) */}
-        <div className="pointer-events-none absolute -bottom-8 -right-8 h-28 w-28 rounded-tl-full bg-[#0BAFD7]/85 transition-transform duration-500 group-hover:scale-110" />
-
-        <div className="relative z-10 p-6 md:p-7 flex flex-col h-full">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {pills.map((p, i) => (
-              <LabelPill key={i} text={p.text} color={p.color} />
-            ))}
-          </div>
-
-          {/* 標題 (Hover 時文字顏色微變) */}
-          <h3 className="text-[22px] leading-[1.5] font-extrabold text-[#2C5164] mb-3 transition-colors duration-300 group-hover:text-[#0BAFD7]">
-            {title}
-          </h3>
-          <p className="text-[14px] leading-relaxed text-[#5B7382] mb-6 flex-grow">
-            {desc}
-          </p>
-          <div className="flex flex-wrap mt-auto">
-            {tags.map((t, i) => (
-              <TAG key={i} bg="#34414D" color="#ffffff">
-                #{t}
-              </TAG>
-            ))}
-          </div>
-        </div>
-      </Link>
+      {card}
     </FadeUp>
   );
 }
@@ -283,17 +290,36 @@ export default function PickUpJobsSection() {
             </nav>
           </header>
 
-          {/* Cards */}
+          {/* 手機版輪播 */}
           <AnimatePresence mode="wait">
-            <div key={active} className="grid gap-6 md:grid-cols-3">
+            <div key={`mobile-${active}`} className="md:hidden">
+              <MobileCardCarousel slideClassName="min-w-0 flex-[0_0_88%]" autoplayDelay={4500}>
+                {cards.map((c, i) => (
+                  <JobCard
+                    key={`${active}-m-${i}`}
+                    title={c.title}
+                    desc={c.desc}
+                    pills={c.pills}
+                    tags={c.tags}
+                    link={c.link}
+                    noAnimation
+                  />
+                ))}
+              </MobileCardCarousel>
+            </div>
+          </AnimatePresence>
+
+          {/* 桌面版網格 */}
+          <AnimatePresence mode="wait">
+            <div key={`desktop-${active}`} className="hidden md:grid gap-6 md:grid-cols-3">
               {cards.map((c, i) => (
                 <JobCard
-                  key={`${active}-${i}`}
+                  key={`${active}-d-${i}`}
                   title={c.title}
                   desc={c.desc}
                   pills={c.pills}
                   tags={c.tags}
-                  link={c.link} // 🌟 傳遞 link 屬性
+                  link={c.link}
                   delay={i * 0.06}
                 />
               ))}

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import MobileCardCarousel from "./MobileCardCarousel";
 
 /** 國家 Tab（之後可改由 CMS / 聯盟 API 提供） */
 const COUNTRY_TABS = [
@@ -259,15 +260,39 @@ export default function AccommodationRecommendSection() {
           ))}
         </div>
 
-        {/* 卡片網格 */}
+        {/* 手機版輪播 */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeTab}
+            key={`mobile-${activeTab}`}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5"
+            className="md:hidden"
+          >
+            {displayItems.length > 0 ? (
+              <MobileCardCarousel slideClassName="min-w-0 flex-[0_0_82%]">
+                {displayItems.map((item) => (
+                  <AccommodationCard key={item.id} item={item} />
+                ))}
+              </MobileCardCarousel>
+            ) : (
+              <p className="text-center text-gray-500 py-12 text-sm">
+                此國家暫無推薦住宿，敬請期待合作上架
+              </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* 桌面版網格 */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`desktop-${activeTab}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5"
           >
             {displayItems.length > 0 ? (
               displayItems.map((item) => (

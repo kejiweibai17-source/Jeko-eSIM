@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import MobileCardCarousel from "./MobileCardCarousel";
 
 /** 假資料 — 之後可改 CMS / 聯盟 API */
 const CAR_TYPES = [
@@ -164,8 +165,17 @@ export default function CarRentalCharterSection() {
           </p>
         </div>
 
-        {/* 三欄卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
+        {/* 手機版輪播 */}
+        <div className="md:hidden">
+          <MobileCardCarousel slideClassName="min-w-0 flex-[0_0_88%]">
+            <PromoCard />
+            <VehicleTypesCard />
+            <CharterPhotoCard />
+          </MobileCardCarousel>
+        </div>
+
+        {/* 桌面版三欄 */}
+        <div className="hidden md:grid grid-cols-3 gap-4 lg:gap-5">
           <PromoCard />
           <VehicleTypesCard />
           <CharterPhotoCard />
