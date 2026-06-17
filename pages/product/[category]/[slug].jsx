@@ -6,6 +6,15 @@ import { useRouter } from "next/router";
 import { useCart } from "../../../components/context/CartContext";
 import Layout from "../../Layout";
 import { buildProductSeo } from "../../../lib/seo.config";
+import {
+  resolveOverviewNotices,
+  parseOverviewNoticesByCarrier,
+} from "../../../lib/productOverviewNotices";
+import {
+  resolveDetailedContent,
+  parseDetailedContentByCarrier,
+} from "../../../lib/productDetailedContent";
+import { useUser } from "../../../components/context/UserContext";
 import MaterialIcon from "../../../components/MaterialIcon";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -17,6 +26,11 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import DOMPurify from "isomorphic-dompurify";
 import "react-quill/dist/quill.snow.css";
+import {
+  buildProductRichTextHtml,
+  sanitizeProductRichTextHtml,
+  PRODUCT_RICH_LINK_CLASS,
+} from "../../../lib/productRichText";
 
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
@@ -211,63 +225,13 @@ const CARRIER_SPECS_DATA = {
 const stripHtml = (html) =>
   html ? html.replace(/<[^>]*>?/gm, "").substring(0, 160) + "..." : "";
 
-const FEATURE_LINK_CLASS = "text-[#00befa] hover:underline font-medium";
+const FEATURE_LINK_CLASS = PRODUCT_RICH_LINK_CLASS;
 
-const applyFeatureLinks = (segment) => {
-  const escaped = segment
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  return escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
-    const safeHref = String(href).trim();
-    if (!/^https?:\/\//i.test(safeHref) && !safeHref.startsWith("/")) {
-      return label;
-    }
-    return `<a href="${safeHref.replace(/"/g, "&quot;")}" class="${FEATURE_LINK_CLASS}">${label}</a>`;
-  });
-};
-
-/** 重點特色：Markdown 連結 + 換行/空行分段 */
+/** 重點特色 / 概覽說明：粗體 **文字**、連結 [文字](網址) */
 const formatFeatureBulletHtml = (text) => {
   if (!text) return "";
-  const linkClass = FEATURE_LINK_CLASS;
-
-  if (/<a\s/i.test(text) && /<p|<br/i.test(text)) {
-    return DOMPurify.sanitize(text, {
-      ALLOWED_TAGS: ["a", "p", "br"],
-      ALLOWED_ATTR: ["href", "target", "rel", "class"],
-    });
-  }
-
-  if (/<a\s/i.test(text) && !/\n/.test(text)) {
-    return DOMPurify.sanitize(text, {
-      ALLOWED_TAGS: ["a"],
-      ALLOWED_ATTR: ["href", "target", "rel", "class"],
-    });
-  }
-
-  const paragraphs = text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  if (paragraphs.length === 0) return "";
-
-  const html = paragraphs
-    .map((paragraph) => {
-      const lines = paragraph
-        .split("\n")
-        .map((line) => applyFeatureLinks(line.trim()))
-        .filter(Boolean);
-      return `<p class="feature-para mb-2 last:mb-0 leading-relaxed">${lines.join("<br>")}</p>`;
-    })
-    .join("");
-
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["a", "p", "br"],
-    ALLOWED_ATTR: ["href", "class"],
-  });
+  const raw = buildProductRichTextHtml(text, FEATURE_LINK_CLASS);
+  return sanitizeProductRichTextHtml(raw, DOMPurify.sanitize);
 };
 
 function FeatureBulletText({ children, className = "" }) {
@@ -277,6 +241,46 @@ function FeatureBulletText({ children, className = "" }) {
       className={`feature-bullet-text ${className}`}
       dangerouslySetInnerHTML={{ __html: html }}
     />
+  );
+}
+
+/** 概覽分頁：FUP 資訊 + 啟用注意（後台 Medusa metadata 可編輯） */
+function ProductOverviewNotices({ notices, carrierFallback }) {
+  const fupText =
+    notices?.fup_notice ||
+    (carrierFallback?.policyTitle && carrierFallback?.policyDesc
+      ? `${carrierFallback.policyTitle} ${carrierFallback.policyDesc}`
+      : "");
+  const activationText =
+    notices?.activation_notice || carrierFallback?.note || "";
+
+  if (!fupText && !activationText) return null;
+
+  return (
+    <div className="mt-4 space-y-3">
+      {fupText && (
+        <div className="flex gap-3 rounded-lg border border-slate-200 bg-sky-50/80 px-4 py-3.5 text-sm text-slate-700 leading-relaxed border-l-4 border-l-sky-500">
+          <MaterialIcon
+            name="info"
+            size={20}
+            className="text-sky-600 shrink-0 mt-0.5"
+          />
+          <FeatureBulletText className="flex-1 min-w-0">{fupText}</FeatureBulletText>
+        </div>
+      )}
+      {activationText && (
+        <div className="flex gap-3 rounded-lg border border-slate-200 bg-amber-50/90 px-4 py-3.5 text-sm text-slate-700 leading-relaxed border-l-4 border-l-amber-400">
+          <MaterialIcon
+            name="warning"
+            size={20}
+            className="text-amber-600 shrink-0 mt-0.5"
+          />
+          <FeatureBulletText className="flex-1 min-w-0">
+            {activationText}
+          </FeatureBulletText>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -881,34 +885,136 @@ const ComparisonTable = () => (
   </div>
 );
 
+const DETAILED_CONTENT_SANITIZE = {
+  ALLOWED_TAGS: [
+    "p",
+    "br",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "u",
+    "a",
+    "ul",
+    "ol",
+    "li",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "img",
+    "div",
+    "span",
+    "blockquote",
+  ],
+  ALLOWED_ATTR: [
+    "href",
+    "class",
+    "style",
+    "src",
+    "alt",
+    "target",
+    "rel",
+    "width",
+    "height",
+  ],
+};
+
 // ==========================================
-// 產品動態介紹區域 (支援視覺化 & HTML 雙模式編輯)
+// 產品動態介紹區域 (依電信商 + 管理者專用編輯)
 // ==========================================
-const ProductTabs = ({ product, selectedCarrier }) => {
+const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
   const [activeTab, setActiveTab] = useState("desc");
   const { data: session } = useSession();
+  const { token } = useUser();
 
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState(product.detailed_content || "");
+  const [content, setContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [editMode, setEditMode] = useState("visual");
 
+  const safeCarrier = selectedCarrier || null;
+  const specs =
+    (safeCarrier && CARRIER_SPECS_DATA[safeCarrier]) ||
+    CARRIER_SPECS_DATA["default"];
+  const introBullets = resolveIntroBullets(product, safeCarrier);
+  const displayedContent = resolveDetailedContent(product, safeCarrier);
+  const sanitizedDisplayHtml = useMemo(
+    () => DOMPurify.sanitize(displayedContent || "", DETAILED_CONTENT_SANITIZE),
+    [displayedContent],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const headers = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch("/api/admin/verify", {
+          credentials: "include",
+          headers,
+        });
+        const data = res.ok ? await res.json() : { isAdmin: false };
+        if (!cancelled) setIsAdmin(!!data.isAdmin);
+      } catch {
+        if (!cancelled) setIsAdmin(false);
+      } finally {
+        if (!cancelled) setAdminChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, session?.user?.email]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setContent(resolveDetailedContent(product, safeCarrier));
+    }
+  }, [product, safeCarrier, isEditing]);
+
   const handleSave = async () => {
+    if (!safeCarrier) {
+      alert("請先選擇電信商後再儲存");
+      return;
+    }
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from("products")
-        .update({ detailed_content: content })
-        .eq("slug", product.slug);
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
 
-      if (error) throw error;
-      alert("產品介紹更新成功！(已儲存至 Supabase 擴充表)");
+      const res = await fetch("/api/admin/product-detailed-content", {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: JSON.stringify({
+          productId: product.id,
+          carrier: safeCarrier,
+          html: content,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.detail || "儲存失敗");
+      }
+
+      onProductUpdate?.({
+        detailed_content_by_carrier: data.detailed_content_by_carrier,
+      });
       setIsEditing(false);
-      product.detailed_content = content;
+      alert(`已儲存「${safeCarrier}」的產品介紹`);
     } catch (error) {
-      console.warn("如果 Supabase 找不到對應產品，請確認雙邊同步狀態。", error);
-      alert("儲存失敗，請檢查 Console。");
+      alert(error.message || "儲存失敗");
     } finally {
       setIsSaving(false);
     }
@@ -919,12 +1025,6 @@ const ProductTabs = ({ product, selectedCarrier }) => {
     { id: "specs", label: "套餐參數" },
     { id: "install", label: "安裝/激活" },
   ];
-
-  const safeCarrier = selectedCarrier || null;
-  const specs =
-    (safeCarrier && CARRIER_SPECS_DATA[safeCarrier]) ||
-    CARRIER_SPECS_DATA["default"];
-  const introBullets = resolveIntroBullets(product, safeCarrier);
 
   const quillModules = {
     toolbar: [
@@ -973,9 +1073,19 @@ const ProductTabs = ({ product, selectedCarrier }) => {
                 />
                 關於 {product.name}
               </h3>
-              {isAdmin && (
+              {adminChecked && isAdmin && (
                 <button
-                  onClick={() => setIsEditing(!isEditing)}
+                  type="button"
+                  onClick={() => {
+                    if (!safeCarrier) {
+                      alert("請先選擇電信商，再編輯該電信商的產品介紹");
+                      return;
+                    }
+                    if (!isEditing) {
+                      setContent(resolveDetailedContent(product, safeCarrier));
+                    }
+                    setIsEditing(!isEditing);
+                  }}
                   className={`inline-flex items-center gap-1.5 px-4 py-2 rounded text-sm font-bold text-white transition-colors ${isEditing ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
                 >
                   {isEditing ? (
@@ -991,8 +1101,15 @@ const ProductTabs = ({ product, selectedCarrier }) => {
               )}
             </div>
 
-            {isEditing ? (
+            {isEditing && isAdmin ? (
               <div className="mb-10 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 text-xs text-amber-900">
+                  正在編輯電信商：
+                  <strong className="font-bold ml-1">{safeCarrier}</strong>
+                  <span className="text-amber-700 ml-2">
+                    （各電信商內容獨立儲存，切換電信商前請先儲存）
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 bg-slate-100 p-2 border-b border-gray-200">
                   <button
                     onClick={() => setEditMode("visual")}
@@ -1084,18 +1201,30 @@ const ProductTabs = ({ product, selectedCarrier }) => {
                   )}
                 </div>
 
-                {product.detailed_content && (
+                {sanitizedDisplayHtml ? (
                   <div className="mt-8 pt-8 border-t border-gray-100">
                     <h4 className="font-bold text-slate-800 mb-4">
-                      📖 方案詳細說明：
+                      📖 方案詳細說明
+                      {safeCarrier ? (
+                        <span className="text-gray-400 font-normal text-sm ml-2">
+                          （{safeCarrier}）
+                        </span>
+                      ) : null}
                     </h4>
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: product.detailed_content,
+                        __html: sanitizedDisplayHtml,
                       }}
                       className="prose max-w-none product-content-wrapper"
                     />
                   </div>
+                ) : (
+                  safeCarrier && (
+                    <p className="mt-6 text-sm text-slate-400">
+                      「{safeCarrier}」尚無產品介紹內容。
+                      {isAdmin ? " 點「編輯內容」新增。" : ""}
+                    </p>
+                  )
                 )}
               </div>
             )}
@@ -1905,13 +2034,20 @@ export async function getStaticProps({ params }) {
       Object.keys(parsedKeyFeatures),
     );
 
+    const rawOverviewNotices = product.metadata?.overview_notices_by_carrier;
+    const rawDetailedByCarrier = product.metadata?.detailed_content_by_carrier;
+
     const formattedProduct = {
       id: product.id,
       name: product.title,
       slug: product.handle,
       description: product.description || "",
       detailed_content: product.metadata?.detailed_content || "",
+      detailed_content_by_carrier: parseDetailedContentByCarrier(
+        rawDetailedByCarrier,
+      ),
       key_features_by_carrier: parsedKeyFeatures,
+      overview_notices_by_carrier: parseOverviewNoticesByCarrier(rawOverviewNotices),
       image_url: product.thumbnail || null,
       image_urls: product.images?.map((img) => img.url) || [],
       price: product.variants?.[0]?.prices?.[0]?.amount || null,
@@ -2041,10 +2177,22 @@ export default function ProductPage({
     )
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!data?.key_features_by_carrier) return;
+        if (!data) return;
         setProduct((prev) => ({
           ...prev,
-          key_features_by_carrier: data.key_features_by_carrier,
+          ...(data.key_features_by_carrier
+            ? { key_features_by_carrier: data.key_features_by_carrier }
+            : {}),
+          ...(data.overview_notices_by_carrier
+            ? {
+                overview_notices_by_carrier: data.overview_notices_by_carrier,
+              }
+            : {}),
+          ...(data.detailed_content_by_carrier
+            ? {
+                detailed_content_by_carrier: data.detailed_content_by_carrier,
+              }
+            : {}),
           detailed_content: data.detailed_content || prev.detailed_content,
         }));
       })
@@ -2180,6 +2328,7 @@ export default function ProductPage({
     CARRIER_INFO_MAP[carrierName] || CARRIER_INFO_MAP.default;
   const marketingConfig = activeCarrierInfo.marketingBox;
   const introBullets = resolveIntroBullets(product, carrierName);
+  const overviewNotices = resolveOverviewNotices(product, carrierName);
 
   const priceSavings = useMemo(() => {
     if (
@@ -2468,6 +2617,13 @@ export default function ProductPage({
                   安裝說明
                 </button>
               </div>
+
+              {mediaTab === "overview" && (
+                <ProductOverviewNotices
+                  notices={overviewNotices}
+                  carrierFallback={marketingConfig}
+                />
+              )}
             </div>
 
             {/* ========== 右：商品資訊與選購 ========== */}
@@ -2913,7 +3069,13 @@ export default function ProductPage({
             </div>
           </section>
 
-          <ProductTabs product={product} selectedCarrier={carrierName} />
+          <ProductTabs
+            product={product}
+            selectedCarrier={carrierName}
+            onProductUpdate={(patch) =>
+              setProduct((prev) => ({ ...prev, ...patch }))
+            }
+          />
           <ReviewsSection productId={product.id} />
         </div>
       </div>

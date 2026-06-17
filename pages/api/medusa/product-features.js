@@ -1,4 +1,7 @@
-/** 前台即時讀取 Medusa 商品 metadata（含 key_features_by_carrier） */
+/** 前台即時讀取 Medusa 商品 metadata（含 key_features_by_carrier、overview_notices） */
+
+import { parseOverviewNoticesByCarrier } from "../../../lib/productOverviewNotices";
+import { parseDetailedContentByCarrier } from "../../../lib/productDetailedContent";
 
 function parseKeyFeaturesByCarrier(raw) {
   if (!raw) return {};
@@ -73,6 +76,12 @@ export default async function handler(req, res) {
     return res.status(200).json({
       key_features_by_carrier: parseKeyFeaturesByCarrier(
         product.metadata?.key_features_by_carrier,
+      ),
+      overview_notices_by_carrier: parseOverviewNoticesByCarrier(
+        product.metadata?.overview_notices_by_carrier,
+      ),
+      detailed_content_by_carrier: parseDetailedContentByCarrier(
+        product.metadata?.detailed_content_by_carrier,
       ),
       detailed_content: product.metadata?.detailed_content || "",
     });

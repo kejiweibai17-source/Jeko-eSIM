@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import MaterialIcon from "./MaterialIcon";
 import { useUser } from "./context/UserContext";
 import {
@@ -15,6 +16,7 @@ import {
   PUSH_TEST_ICCID,
   isPushTestMode,
 } from "../lib/pushSubscribe";
+import { buildLoginUrl } from "../lib/authRedirect";
 
 function authHeaders(token) {
   return {
@@ -31,8 +33,11 @@ export default function GuestPushBindForm({
   initialIccid = "",
   className = "",
   embedded = false,
+  variant = "guest",
 }) {
   const { token } = useUser();
+  const router = useRouter();
+  const loginHref = buildLoginUrl(router.asPath?.split("?")[0] || "/data-query");
   const [iccid, setIccid] = useState(initialIccid);
   const [loading, setLoading] = useState(false);
   const [stepLabel, setStepLabel] = useState("");
@@ -51,6 +56,7 @@ export default function GuestPushBindForm({
     }
 
     setLoading(true);
+    setStepLabel("準備中");
     try {
       let endpoint = await getPushEndpoint();
       if (!endpoint) {
@@ -89,6 +95,7 @@ export default function GuestPushBindForm({
   };
 
   const fillTestIccid = () => setIccid(PUSH_TEST_ICCID);
+  const isMember = variant === "member";
 
   return (
     <div
@@ -99,15 +106,35 @@ export default function GuestPushBindForm({
       }
     >
       <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-          <MaterialIcon name="person_off" size={20} className="text-amber-700" />
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+            isMember ? "bg-blue-100" : "bg-amber-100"
+          }`}
+        >
+          <MaterialIcon
+            name={isMember ? "person" : "person_off"}
+            size={20}
+            className={isMember ? "text-[#1d5cc5]" : "text-amber-700"}
+          />
         </div>
         <div>
-          <p className="font-bold text-stone-900 text-sm">訪客模式 · 尚未加入會員</p>
+          <p className="font-bold text-stone-900 text-sm">
+            {isMember ? "會員模式 · 手動綁定 ICCID" : "訪客模式 · 尚未加入會員"}
+          </p>
           <p className="text-xs text-stone-500 mt-1 leading-relaxed">
-            請輸入 eSIM 的 ICCID，點下方按鈕後會
-            <strong className="text-stone-700">一併開啟瀏覽器推播</strong>
-            並完成綁定（僅需設定一次）。
+            {isMember ? (
+              <>
+                系統找不到您在本站的 eSIM 訂單。請輸入 eSIM 的 ICCID，點下方按鈕後會
+                <strong className="text-stone-700">一併開啟瀏覽器推播</strong>
+                並完成綁定。
+              </>
+            ) : (
+              <>
+                請輸入 eSIM 的 ICCID，點下方按鈕後會
+                <strong className="text-stone-700">一併開啟瀏覽器推播</strong>
+                並完成綁定（僅需設定一次）。
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -180,18 +207,22 @@ export default function GuestPushBindForm({
             ? stepLabel
               ? `${stepLabel}…`
               : "處理中…"
-            : "留下 ICCID 並啟用流量提醒"}
+            : isMember
+              ? "開啟推播並綁定 ICCID"
+              : "留下 ICCID 並啟用流量提醒"}
           {!loading && <MaterialIcon name="arrow_forward" size={18} />}
         </button>
       </form>
 
-      <p className="mt-4 text-[11px] text-stone-500 text-center">
-        曾在本站購買？{" "}
-        <Link href="/login" className="font-bold text-[#1d5cc5] hover:underline">
-          登入會員
-        </Link>{" "}
-        可一鍵綁定訂單，無需手動輸入 ICCID
-      </p>
+      {!isMember && (
+        <p className="mt-4 text-[11px] text-stone-500 text-center">
+          曾在本站購買？{" "}
+          <Link href={loginHref} className="font-bold text-[#1d5cc5] hover:underline">
+            登入會員
+          </Link>{" "}
+          可一鍵綁定訂單，無需手動輸入 ICCID
+        </p>
+      )}
     </div>
   );
 }

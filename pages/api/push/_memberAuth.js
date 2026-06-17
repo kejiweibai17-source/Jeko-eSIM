@@ -1,7 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { extractEsimsFromOrders } from "../../../lib/esimOrderExtract";
+import { fetchMemberEsims } from "../../../lib/memberEsims";
+
+export { fetchMemberEsims } from "../../../lib/memberEsims";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -25,21 +27,11 @@ export async function resolveMemberEmail(req, res) {
   if (session?.user) {
     const email =
       session.user.email ||
-      `${session.user.id || session.user.name}@line.jekoesim.com`;
+      (session.user.id
+        ? `${session.user.id}@line-login.com`
+        : `${session.user.name || "line"}@line.jekoesim.com`);
     return { email: email.toLowerCase(), userId: session.user.id || null, source: "line" };
   }
 
   return null;
-}
-
-export async function fetchMemberEsims(email) {
-  const { data: orders, error } = await supabaseAdmin
-    .from("orders")
-    .select("id, items, qrcode_data, status, created_at, customer_email")
-    .eq("customer_email", email)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (error) throw error;
-  return extractEsimsFromOrders(orders || []);
 }

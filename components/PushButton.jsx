@@ -26,6 +26,7 @@ export default function PushButton({
   className = "",
   showDebugPanel = true,
   onSubscribed,
+  onBeforeSubscribe,
   requireLogin = false,
   theme = "default",
 }) {
@@ -101,6 +102,11 @@ export default function PushButton({
       addLog("❌ 未登入");
       alert("請先登入會員，才能開啟流量提醒通知喔！");
       return;
+    }
+
+    if (onBeforeSubscribe) {
+      const allowed = await onBeforeSubscribe();
+      if (!allowed) return;
     }
 
     if (token) addLog(`已登入 ${user?.email || user?.id}`);

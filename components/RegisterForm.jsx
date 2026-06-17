@@ -5,10 +5,11 @@ import { supabase } from "../lib/supabaseClient";
 // 🚀 關鍵引入：匯入 NextAuth 的 signIn 函數
 import { signIn } from "next-auth/react";
 import { authLog, logLineLoginStart, getOAuthRedirectUrl } from "../lib/authDebug";
+import { sanitizeRedirect } from "../lib/authRedirect";
 
 const RESEND_WAIT_SECONDS = 60;
 
-const RegisterForm = ({ onSuccess }) => {
+const RegisterForm = ({ onSuccess, redirectTo = "/account" }) => {
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -138,13 +139,15 @@ const RegisterForm = ({ onSuccess }) => {
     }
   };
 
+  const safeRedirect = sanitizeRedirect(redirectTo, "/account");
+
   /* ====== 4. 社群快速註冊 (Google - Supabase OAuth) ====== */
   const handleOAuthLogin = async (provider) => {
     try {
-      const redirectTo = getOAuthRedirectUrl("/account");
+      const redirectToUrl = getOAuthRedirectUrl(safeRedirect);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
-        options: { redirectTo },
+        options: { redirectTo: redirectToUrl },
       });
       if (error) throw error;
     } catch (err) {
@@ -157,7 +160,7 @@ const RegisterForm = ({ onSuccess }) => {
     authLog("RegisterForm LINE 登入開始");
     const { callbackUrl } = await logLineLoginStart(
       window.location.origin,
-      "/account",
+      safeRedirect,
     );
     const result = await signIn("line", { callbackUrl, redirect: false });
     authLog("RegisterForm signIn 回傳", result);

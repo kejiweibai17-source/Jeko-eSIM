@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/router";
 import Layout from "./Layout";
 import RegisterForm from "../components/RegisterForm";
 import ForgotPasswordForm from "../components/ForgotPasswordForm";
 import { supabase } from "../lib/supabaseClient";
 import { useUser } from "../components/context/UserContext";
 
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import {
   authLog,
   authError,
@@ -16,10 +16,17 @@ import {
   logLineLoginStart,
   getOAuthRedirectUrl,
 } from "../lib/authDebug";
+import { sanitizeRedirect } from "../lib/authRedirect";
 
 const LoginRegisterPage = () => {
   const router = useRouter();
   const { user: supaUser, isHydrated } = useUser();
+  const { status: nextAuthStatus } = useSession();
+
+  const redirectTo = useMemo(
+    () => sanitizeRedirect(router.query.redirect, "/account"),
+    [router.query.redirect],
+  );
 
   const [selected, setSelected] = useState("login");
   const [showForgot, setShowForgot] = useState(false);
@@ -28,17 +35,14 @@ const LoginRegisterPage = () => {
   const [message, setMessage] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
 
-  // 🛠️ 終極除錯監控台狀態
-  const [debugLogs, setDebugLogs] = useState([]);
+  // 除錯 log（僅輸出至 Console）
   const addLog = (msg) => {
     console.log(`[Auth Debug]`, msg);
-    setDebugLogs((prev) => [
-      ...prev,
-      `${new Date().toLocaleTimeString()} | ${msg}`,
-    ]);
   };
 
-  const isLoggedIn = isHydrated && !!supaUser;
+  const isLoggedIn =
+    isHydrated &&
+    (!!supaUser || nextAuthStatus === "authenticated");
 
   // 🛠️ 監聽所有底層狀態與網址參數
   useEffect(() => {
@@ -96,16 +100,15 @@ const LoginRegisterPage = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 自動跳轉
+  // 登入成功後回到原頁（或 redirect 參數指定頁面）
   useEffect(() => {
-    if (isLoggedIn) {
-      addLog("🚀 偵測到登入狀態，準備跳轉至會員中心...");
-      const timer = setTimeout(() => {
-        router.push("/account");
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoggedIn, router]);
+    if (!isLoggedIn) return;
+    addLog(`🚀 登入成功，導回 ${redirectTo}`);
+    const timer = setTimeout(() => {
+      router.replace(redirectTo);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [isLoggedIn, redirectTo, router]);
 
   // 一般 Email 登入
   const handleLogin = async (e) => {
@@ -133,7 +136,7 @@ const LoginRegisterPage = () => {
   const handleOAuthLogin = async (provider) => {
     try {
       addLog(`準備請求 ${provider} 授權...`);
-      const redirectUrl = getOAuthRedirectUrl("/account");
+      const redirectUrl = getOAuthRedirectUrl(redirectTo);
       addLog(`redirectTo: ${redirectUrl}`);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -158,7 +161,7 @@ const LoginRegisterPage = () => {
       addLog("🟢 點擊 LINE 登入...");
       const { callbackUrl, serverConfig } = await logLineLoginStart(
         window.location.origin,
-        "/account",
+        redirectTo,
       );
       addLog(`callbackUrl: ${callbackUrl}`);
       if (serverConfig?.expectedLineCallback) {
@@ -351,6 +354,7 @@ const LoginRegisterPage = () => {
                 )
               ) : (
                 <RegisterForm
+                  redirectTo={redirectTo}
                   onSuccess={(msg) => {
                     setSelected("login");
                     setSuccessMessage(
@@ -370,20 +374,6 @@ const LoginRegisterPage = () => {
             </div>
           )}
         </div>
-
-        {/* 🛠️ Auth Debug 面板（正式站也可看 Console；此區塊輔助非工程師） */}
-        {debugLogs.length > 0 && (
-          <div className="mt-6 w-full max-w-md mx-auto rounded-lg bg-black/40 border border-white/20 p-3 text-[10px] font-mono text-white/80 max-h-40 overflow-y-auto">
-            <p className="font-bold text-white/90 mb-1">
-              [Auth Debug] 瀏覽器 F12 → Console 可看完整 log
-            </p>
-            {debugLogs.slice(-8).map((line, i) => (
-              <div key={i} className="leading-relaxed break-all">
-                {line}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </Layout>
   );

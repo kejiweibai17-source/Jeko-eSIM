@@ -136,6 +136,12 @@ export default NextAuth({
       return token;
     },
     async session({ session, token }) {
+      if (session?.user && token?.sub) {
+        session.user.id = token.sub;
+        if (!session.user.email) {
+          session.user.email = `${token.sub}@line-login.com`;
+        }
+      }
       log("callback.session", {
         email: session?.user?.email,
         tokenSub: token?.sub,

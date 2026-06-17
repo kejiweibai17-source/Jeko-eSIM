@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { buildLoginUrl } from "@/lib/authRedirect";
 
 // 🌟 引入 NextAuth 勾子
 import { useSession, signOut } from "next-auth/react";
@@ -124,6 +125,8 @@ const fullMenuLinks = [
 // --- 3. Navbar 主元件 ---
 export default function Navbar({ className }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const loginHref = buildLoginUrl(pathname || "/");
   const [mounted, setMounted] = useState(false);
 
   // --- UI 狀態管理 ---
@@ -322,7 +325,7 @@ export default function Navbar({ className }: NavbarProps) {
                   </>
                 ) : (
                   <Link
-                    href="/login"
+                    href={loginHref}
                     className="text-sm font-bold text-slate-600 hover:text-[#0A6CD0] transition-colors flex items-center gap-2"
                   >
                     <UserIcon className="w-5 h-5" />
@@ -639,7 +642,7 @@ export default function Navbar({ className }: NavbarProps) {
                   </div>
                 ) : (
                   <Link
-                    href="/login"
+                    href={loginHref}
                     onClick={() => setMobileOpen(false)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#F2F4F7] text-[#0A6CD0] py-3.5 text-sm font-bold shadow-sm transition-opacity active:opacity-80"
                   >

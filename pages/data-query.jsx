@@ -8,6 +8,7 @@ import MaterialIcon from "@/components/MaterialIcon";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import PushNotificationSection from "@/components/PushNotificationSection";
+import { DATA_PLANS, USAGE_ROWS, USAGE_TABLE_DISCLAIMER } from "@/lib/dataUsageTable";
 import { ICCID_STORAGE_KEY, normalizeIccid } from "@/lib/pushBind";
 
 /** 圖二參考設計：藍色圓角按鈕 */
@@ -32,127 +33,6 @@ function RefPillButton({
   );
 }
 
-/* ── 流量對照資料（參考 Yesim / Saily / Monito 業界估算） ── */
-const DATA_PLANS = [
-  { key: "1gb", label: "1 GB", sub: "輕量旅遊", highlight: false },
-  { key: "3gb", label: "3 GB", sub: "一般旅遊", highlight: false },
-  { key: "5gb", label: "5 GB", sub: "熱門方案", highlight: true },
-  { key: "10gb", label: "10 GB", sub: "深度旅遊", highlight: false },
-];
-
-const USAGE_ROWS = [
-  {
-    activity: "Facebook / Instagram 瀏覽",
-    icon: "smartphone",
-    note: "約 120 MB／小時",
-    values: {
-      "1gb": { text: "約 8 小時", ok: true },
-      "3gb": { text: "約 25 小時", ok: true },
-      "5gb": { text: "約 42 小時", ok: true },
-      "10gb": { text: "約 85 小時", ok: true },
-    },
-  },
-  {
-    activity: "Line / WhatsApp 文字訊息",
-    icon: "chat",
-    note: "約 20 MB／小時",
-    values: {
-      "1gb": { text: "約 50 小時", ok: true },
-      "3gb": { text: "約 150 小時", ok: true },
-      "5gb": { text: "約 250 小時", ok: true },
-      "10gb": { text: "約 500 小時", ok: true },
-    },
-  },
-  {
-    activity: "手機線上遊戲",
-    icon: "sports_esports",
-    note: "約 100 MB／小時",
-    values: {
-      "1gb": { text: "約 10 小時", ok: true },
-      "3gb": { text: "約 30 小時", ok: true },
-      "5gb": { text: "約 51 小時", ok: true },
-      "10gb": { text: "約 100 小時", ok: true },
-    },
-  },
-  {
-    activity: "Google Maps 導航",
-    icon: "map",
-    note: "約 80 MB／小時",
-    values: {
-      "1gb": { text: "約 12 小時", ok: true },
-      "3gb": { text: "約 38 小時", ok: true },
-      "5gb": { text: "約 64 小時", ok: true },
-      "10gb": { text: "約 128 小時", ok: true },
-    },
-  },
-  {
-    activity: "一般網頁瀏覽",
-    icon: "language",
-    note: "約 100 MB／小時",
-    values: {
-      "1gb": { text: "約 10 小時", ok: true },
-      "3gb": { text: "約 30 小時", ok: true },
-      "5gb": { text: "約 51 小時", ok: true },
-      "10gb": { text: "約 100 小時", ok: true },
-    },
-  },
-  {
-    activity: "Spotify / 音樂串流",
-    icon: "music_note",
-    note: "約 40 MB／小時",
-    values: {
-      "1gb": { text: "約 25 小時", ok: true },
-      "3gb": { text: "約 75 小時", ok: true },
-      "5gb": { text: "約 128 小時", ok: true },
-      "10gb": { text: "約 256 小時", ok: true },
-    },
-  },
-  {
-    activity: "YouTube 標準畫質",
-    icon: "play_circle",
-    note: "約 500 MB／小時",
-    values: {
-      "1gb": { text: "約 2 小時", ok: false },
-      "3gb": { text: "約 6 小時", ok: true },
-      "5gb": { text: "約 10 小時", ok: true },
-      "10gb": { text: "約 20 小時", ok: true },
-    },
-  },
-  {
-    activity: "WhatsApp / FaceTime 視訊",
-    icon: "videocam",
-    note: "約 300 MB／小時",
-    values: {
-      "1gb": { text: "約 3 小時", ok: false },
-      "3gb": { text: "約 10 小時", ok: true },
-      "5gb": { text: "約 17 小時", ok: true },
-      "10gb": { text: "約 34 小時", ok: true },
-    },
-  },
-  {
-    activity: "TikTok / Reels 短影音",
-    icon: "movie",
-    note: "約 700 MB／小時",
-    values: {
-      "1gb": { text: "約 1.5 小時", ok: false },
-      "3gb": { text: "約 4 小時", ok: false },
-      "5gb": { text: "約 7 小時", ok: true },
-      "10gb": { text: "約 14 小時", ok: true },
-    },
-  },
-  {
-    activity: "Netflix HD 串流",
-    icon: "live_tv",
-    note: "約 3 GB／小時",
-    values: {
-      "1gb": { text: "不足 1 小時", ok: false },
-      "3gb": { text: "約 1 小時", ok: false },
-      "5gb": { text: "約 1.5 小時", ok: false },
-      "10gb": { text: "約 3 小時", ok: false },
-    },
-  },
-];
-
 const HOW_IT_WORKS = [
   {
     step: "Step 1",
@@ -170,10 +50,17 @@ const HOW_IT_WORKS = [
   },
   {
     step: "Step 3",
+    title: "開啟流量警示通知",
+    desc: "訪客輸入 ICCID、會員可直接開啟推播。剩餘流量偏低時，系統會自動推播提醒您。",
+    link: "#push-notification-section",
+    linkText: "開啟流量警示 >>",
+  },
+  {
+    step: "Step 4",
     title: "一鍵恢復流量",
     desc: "流量即將用盡？無需重新購買 eSIM，直接充值即可讓原有方案瞬間恢復上網。",
-    link: "/product",
     linkText: "前往充值 >>",
+    comingSoon: true,
   },
 ];
 
@@ -280,6 +167,22 @@ export default function DataQueryPage() {
                       </RefPillButton>
                     </form>
 
+                    <a
+                      href={
+                        process.env.NEXT_PUBLIC_LINE_OA_URL ||
+                        "https://line.me/R/ti/p/@391huuts"
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 inline-flex items-center gap-2 text-xs text-white/90 hover:text-white transition-colors max-w-md"
+                    >
+                      <MaterialIcon name="chat" size={16} />
+                      <span>
+                        加入官方 LINE，傳「<strong className="font-bold">查詢用量</strong>
+                        」或直接貼上 ICCID 也可查詢
+                      </span>
+                    </a>
+
                     {queryError && (
                       <p className="mt-3 text-sm text-red-300 flex items-center gap-1">
                         <MaterialIcon name="error" size={16} />
@@ -332,6 +235,10 @@ export default function DataQueryPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-zinc-900/25" />
 
                 <div className="relative z-10 flex flex-col flex-1 p-7 md:p-8">
+                  <span className="inline-flex self-start bg-stone-500/90 text-white text-[11px] font-bold px-3 py-1 rounded-md">
+                    即將上線
+                  </span>
+
                   <div className="flex-1" />
 
                   <div className="max-w-[92%]">
@@ -362,11 +269,13 @@ export default function DataQueryPage() {
             </div>
 
             {/* 圖二底部橫幅 */}
-            <PushNotificationSection
-              onIccidBound={(boundIccid) => setIccid(boundIccid)}
-              initialIccid={iccid}
-              variant="banner"
-            />
+            <div id="push-notification-section" className="scroll-mt-28">
+              <PushNotificationSection
+                onIccidBound={(boundIccid) => setIccid(boundIccid)}
+                initialIccid={iccid}
+                variant="banner"
+              />
+            </div>
           </div>
 
           {/* ── 注意事項橫幅（參照 Anker 禮品卡橫幅） ── */}
@@ -418,29 +327,46 @@ export default function DataQueryPage() {
             </Link>
           </div>
 
-          {/* ── How It Works 三步驟 ── */}
+          {/* ── How It Works 四步驟 ── */}
           <section className="mb-16">
             <h2 className="text-[22px] md:text-[28px] font-black text-stone-900 mb-8">
               如何使用
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {HOW_IT_WORKS.map((item) => (
                 <div key={item.step} className="relative">
-                  <span className="inline-block bg-[#FF8C00] text-white text-[11px] font-bold px-2.5 py-0.5 rounded mb-3">
-                    {item.step}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="inline-block bg-[#FF8C00] text-white text-[11px] font-bold px-2.5 py-0.5 rounded">
+                      {item.step}
+                    </span>
+                    {item.comingSoon && (
+                      <span className="inline-block bg-stone-200 text-stone-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        即將上線
+                      </span>
+                    )}
+                  </div>
                   <h3 className="text-lg font-black text-stone-900 mb-2">
                     {item.title}
                   </h3>
                   <p className="text-sm text-stone-600 leading-relaxed mb-4">
                     {item.desc}
                   </p>
-                  <Link
-                    href={item.link}
-                    className="text-sm font-bold text-stone-900 hover:text-[#0A6CD0] transition-colors"
-                  >
-                    {item.linkText}
-                  </Link>
+                  {item.comingSoon ? (
+                    <button
+                      type="button"
+                      onClick={() => alert("此功能即將上線")}
+                      className="text-sm font-bold text-stone-400 hover:text-stone-600 transition-colors cursor-pointer"
+                    >
+                      {item.linkText}
+                    </button>
+                  ) : (
+                    <a
+                      href={item.link}
+                      className="text-sm font-bold text-stone-900 hover:text-[#0A6CD0] transition-colors"
+                    >
+                      {item.linkText}
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -452,8 +378,7 @@ export default function DataQueryPage() {
               流量用量對照表
             </h2>
             <p className="text-sm text-stone-500 mb-8">
-              以下為各方案在不同使用情境下的預估可用時間，實際用量因 App
-              設定與畫質而異
+              {USAGE_TABLE_DISCLAIMER}
             </p>
 
             {/* 桌面版表格 */}
