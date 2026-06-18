@@ -3,6 +3,7 @@ import { useState } from "react";
 import Layout from "../Layout";
 import { useUser } from "../../components/context/UserContext";
 import { BellIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import { PWA_LOGO } from "../../lib/pwaConfig";
 
 const INTERNAL_SECRET = "jeko-push-secret-2026";
 
@@ -122,7 +123,7 @@ export default function AdminPushPage() {
                   </p>
                   <div className="flex items-start gap-3">
                     <img
-                      src="/icons/icon-192x192.png"
+                      src={PWA_LOGO}
                       className="w-10 h-10 rounded-xl shrink-0"
                       alt="icon"
                     />

@@ -1,4 +1,5 @@
 /* 本機開發用：僅處理 Web Push，不含 Workbox precache（避免 dev 與 HMR 衝突） */
+const PWA_LOGO = "/images/Logo/jeko-logo.jpg";
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -12,8 +13,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Jeko eSIM 貼心提醒";
   const options = {
     body: data.body || "您有一則新訊息",
-    icon: "/icons/icon-192x192.png",
-    badge: "/icons/icon-192x192.png",
+    icon: PWA_LOGO,
+    badge: PWA_LOGO,
     vibrate: [200, 100, 200],
     data: { url: data.url || "/" },
   };

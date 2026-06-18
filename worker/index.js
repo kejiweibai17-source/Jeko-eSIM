@@ -1,4 +1,5 @@
 // worker/index.js
+const PWA_LOGO = "/images/Logo/jeko-logo.jpg";
 
 // 監聽來自伺服器的推播事件
 self.addEventListener('push', function (event) {
@@ -7,8 +8,8 @@ self.addEventListener('push', function (event) {
   
   const options = {
     body: data.body || '您有一則新訊息',
-    icon: '/icons/icon-192x192.png', // 推播彈出時的左側大圖示
-    badge: '/icons/icon-192x192.png', // 手機上方狀態列的單色小圖示
+    icon: PWA_LOGO, // 推播彈出時的左側大圖示
+    badge: PWA_LOGO, // 手機上方狀態列的單色小圖示
     vibrate: [200, 100, 200], // 手機震動節奏
     data: {
       url: data.url || '/', // 紀錄客人點擊推播後，要打開哪一個網址

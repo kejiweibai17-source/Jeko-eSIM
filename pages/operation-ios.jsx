@@ -343,6 +343,36 @@ export default function IntroHero() {
         className="bg-white mt-[80px] pt-[60px] pb-[160px] flex flex-col items-center"
       >
         <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center leading-tight">
+          第一種安裝方式 <br />{" "}
+          <span className="text-lg md:text-xl text-stone-800 font-normal">
+            長按eSIM 直接安裝
+          </span>
+        </h2>
+        <div className="w-[80%] max-w-[600px] mb-12 space-y-6 text-stone-700 text-base md:text-lg leading-relaxed">
+          <div>
+            <p className="font-bold mb-1">1. 開啟手機設定</p>
+            <p>
+              點選「設定」&gt;「行動服務」或「蜂窩數據」&gt;「加入行動方案」或「加入
+              eSIM」&gt;「使用行動條碼」。
+            </p>
+          </div>
+          <div>
+            <p className="font-bold mb-1">2. 掃描 QR 碼</p>
+            <p>使用手機的相機掃描透過電子郵件收到的 eSIM QR code。</p>
+          </div>
+        </div>
+        <motion.img
+          src="/images/operation-ios/掃描QR碼.png"
+          className="max-w-[1250px]"
+          alt="在手機設定頁面掃描QR碼"
+          style={{ y: y1C }}
+        />
+      </section>
+      <section
+        ref={sectionC}
+        className="bg-white mt-[80px] pt-[60px] pb-[160px] flex flex-col items-center"
+      >
+        <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center leading-tight">
           第二種安裝方式 <br />{" "}
           <span className="text-lg md:text-xl text-stone-800 font-normal">
             在手機設定頁面掃描

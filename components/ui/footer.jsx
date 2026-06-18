@@ -11,7 +11,7 @@ export default function Footer() {
             {/* Logo */}
             <Link href="/" className="inline-block">
               <Image
-                src="/images/logo/logo.png"
+                src="/images/Logo/logo-no-bg.png"
                 alt="Jeko Logo"
                 width={160}
                 height={60}
