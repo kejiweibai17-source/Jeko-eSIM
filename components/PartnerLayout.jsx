@@ -11,6 +11,7 @@ import {
   ShoppingBagIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
+import { SITE_FAVICON } from "@/lib/pwaConfig";
 
 // 註冊 GSAP 插件
 if (typeof window !== "undefined") {
@@ -149,6 +150,7 @@ export default function PartnerLayout({ store, children, title, description }) {
           rel="canonical"
           href={`https://www.jekoesim.com/p/${store.domain}`}
         />
+        <link rel="icon" href={SITE_FAVICON} />
       </Head>
 
       {/* --- 全域樣式 (GSAP Menu) --- */}

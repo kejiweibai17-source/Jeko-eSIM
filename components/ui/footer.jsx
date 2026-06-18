@@ -243,9 +243,11 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="text-[11px] text-gray-500 leading-relaxed font-medium">
               <p className="text-gray-900 font-bold mb-1 text-[12px]">
-                Jeko 極客eSIM 數位企業社
+                藍鏈數位企業社
               </p>
-              <p>台中市XXXXXXXX (營運據點)</p>
+              <p>臺中市北屯區平安里文心路四段750 號地下室之一</p>
+              <p>(僅提供收取信件及包裹服務)</p>
+              <b>60982396</b>
               <p>客服信箱：support@re-media.com</p>
             </div>
 

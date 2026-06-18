@@ -7,6 +7,7 @@ import {
   absoluteUrl,
   buildJsonLdGraph,
 } from "../lib/seo.config";
+import { SITE_FAVICON } from "../lib/pwaConfig";
 
 /**
  * 全站統一 SEO Head：title / description / keywords / OG / Twitter / canonical / GEO / JSON-LD
@@ -87,7 +88,7 @@ export default function SeoHead({
       )}
       <meta name="twitter:image" content={imageUrl} />
 
-      <link rel="icon" href="/logo.ico" />
+      <link rel="icon" href={SITE_FAVICON} />
 
       {/* 結構化資料 @graph */}
       <script

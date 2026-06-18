@@ -7,7 +7,7 @@ import { SessionProvider } from "next-auth/react"; // 🌟 引入 NextAuth 的 S
 import { AuthProvider } from '../components/AuthProvider';
 import { CartProvider } from "../components/context/CartContext"; 
 import { UserProvider } from "../components/context/UserContext"; 
-import { PWA_LOGO } from "../lib/pwaConfig";
+import { PWA_LOGO, SITE_FAVICON } from "../lib/pwaConfig";
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   return (
@@ -15,6 +15,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
       <Head>
         <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
         <meta name="theme-color" content="#147AD7" />
+        <link rel="icon" href={SITE_FAVICON} />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href={PWA_LOGO} />
       </Head>
