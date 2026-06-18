@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import Layout from "../../Layout.js";
 import { buildCategorySeo } from "../../../lib/seo.config";
+import { resolveMedusaImageUrl } from "../../../lib/resolveMedusaImageUrl";
 import CountryFilter from "../../../components/NavbarTestSideBarToggle.jsx";
 import SwiperCarousel from "../../../components/SwiperCarousel/SwiperCard.jsx";
 import FilterSideBar from "../../../components/FilterSideBar";
@@ -136,7 +137,7 @@ export async function getStaticProps({ params }) {
         slug: p.handle,
         price: price,
         original_price: originalPrice,
-        image_url: p.thumbnail,
+        image_url: resolveMedusaImageUrl(p.thumbnail),
         tags: p.tags?.map((t) => t.value) || [],
       };
     });

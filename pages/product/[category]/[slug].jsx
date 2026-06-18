@@ -14,6 +14,10 @@ import {
   resolveDetailedContent,
   parseDetailedContentByCarrier,
 } from "../../../lib/productDetailedContent";
+import {
+  resolveMedusaImageUrl,
+  resolveMedusaImageUrls,
+} from "../../../lib/resolveMedusaImageUrl";
 import { useUser } from "../../../components/context/UserContext";
 import MaterialIcon from "../../../components/MaterialIcon";
 import Image from "next/image";
@@ -40,6 +44,13 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 import { supabase } from "../../../lib/supabaseClient";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
+
+function isMedusaStaticImage(src) {
+  return (
+    typeof src === "string" &&
+    (src.includes("/static/") || /\.vercel\.app/i.test(src))
+  );
+}
 
 // ==========================================
 // 1. 靜態資料設定
@@ -265,7 +276,9 @@ function ProductOverviewNotices({ notices, carrierFallback }) {
             size={20}
             className="text-sky-600 shrink-0 mt-0.5"
           />
-          <FeatureBulletText className="flex-1 min-w-0">{fupText}</FeatureBulletText>
+          <FeatureBulletText className="flex-1 min-w-0">
+            {fupText}
+          </FeatureBulletText>
         </div>
       )}
       {activationText && (
@@ -2043,13 +2056,15 @@ export async function getStaticProps({ params }) {
       slug: product.handle,
       description: product.description || "",
       detailed_content: product.metadata?.detailed_content || "",
-      detailed_content_by_carrier: parseDetailedContentByCarrier(
-        rawDetailedByCarrier,
-      ),
+      detailed_content_by_carrier:
+        parseDetailedContentByCarrier(rawDetailedByCarrier),
       key_features_by_carrier: parsedKeyFeatures,
-      overview_notices_by_carrier: parseOverviewNoticesByCarrier(rawOverviewNotices),
-      image_url: product.thumbnail || null,
-      image_urls: product.images?.map((img) => img.url) || [],
+      overview_notices_by_carrier:
+        parseOverviewNoticesByCarrier(rawOverviewNotices),
+      image_url: resolveMedusaImageUrl(product.thumbnail),
+      image_urls: resolveMedusaImageUrls(
+        product.images?.map((img) => img.url) || [],
+      ),
       price: product.variants?.[0]?.prices?.[0]?.amount || null,
     };
 
@@ -2385,14 +2400,12 @@ export default function ProductPage({
 
   const images = useMemo(() => {
     const imgList = [];
-    if (product?.image_url)
-      imgList.push({ src: product.image_url, alt: product?.name });
-    if (product?.image_urls && Array.isArray(product.image_urls)) {
-      product.image_urls.forEach((url) => {
-        if (url && url !== product.image_url)
-          imgList.push({ src: url, alt: product?.name });
-      });
-    }
+    const thumb = resolveMedusaImageUrl(product?.image_url);
+    if (thumb) imgList.push({ src: thumb, alt: product?.name });
+    const extras = resolveMedusaImageUrls(product?.image_urls || []);
+    extras.forEach((url) => {
+      if (url && url !== thumb) imgList.push({ src: url, alt: product?.name });
+    });
     if (imgList.length === 0)
       imgList.push({
         src: "/default-image.jpg",
@@ -2455,7 +2468,7 @@ export default function ProductPage({
           >
             {/* ========== 左：媒體畫廊 ========== */}
             <div className="w-full lg:sticky lg:top-24 lg:self-start">
-              <div className="relative bg-[#f5f5f5] rounded-2xl overflow-hidden border border-gray-100 group">
+              <div className="relative bg-white rounded-2xl overflow-hidden group">
                 {priceSavings > 0 && (
                   <div
                     className="absolute top-0 left-0 z-20 text-white text-[11px] font-bold leading-tight shadow-md"
@@ -2519,14 +2532,14 @@ export default function ProductPage({
                   centeredSlides={false}
                   watchOverflow
                   onSlideChange={(swiper) => setActiveSlide(swiper.realIndex)}
-                  className="w-full product-main-swiper aspect-square sm:aspect-[4/3] max-h-[min(72vh,640px)]"
+                  className="w-full product-main-swiper aspect-[4/5] sm:aspect-[3/4] max-h-[min(75vh,600px)]"
                 >
                   {images.map((img, idx) => (
                     <SwiperSlide key={idx}>
                       <button
                         type="button"
                         onClick={() => openGalleryLightbox(idx)}
-                        className="relative block w-full h-full min-h-[280px] sm:min-h-[360px] cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00befa] focus-visible:ring-offset-2"
+                        className="relative block w-full h-full min-h-[340px] sm:min-h-[440px] cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00befa] focus-visible:ring-offset-2"
                         aria-label={`放大檢視第 ${idx + 1} 張圖片`}
                       >
                         <Image
@@ -2534,8 +2547,9 @@ export default function ProductPage({
                           alt={img.alt || "product"}
                           fill
                           sizes="(max-width: 1024px) 100vw, 55vw"
-                          className="object-contain p-3 sm:p-5 pointer-events-none"
+                          className="object-contain pointer-events-none"
                           priority={idx === 0}
+                          unoptimized={isMedusaStaticImage(img.src)}
                         />
                       </button>
                     </SwiperSlide>
@@ -2565,6 +2579,7 @@ export default function ProductPage({
                         fill
                         sizes="80px"
                         className="object-cover bg-white"
+                        unoptimized={isMedusaStaticImage(img.src)}
                       />
                     </button>
                   ))}
