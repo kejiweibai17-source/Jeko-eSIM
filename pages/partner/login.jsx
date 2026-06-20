@@ -4,6 +4,10 @@ import Link from "next/link";
 import Head from "next/head";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  partnerLoginBlockMessage,
+  verifyPartnerAccess,
+} from "@/lib/partnerAuth";
 
 const INPUT_CLASS =
   "w-full bg-white/10 border border-white/30 rounded-xl px-4 py-3 text-white placeholder:text-blue-300 text-sm outline-none focus:bg-white/20 focus:border-white/60 transition";
@@ -278,14 +282,9 @@ export default function PartnerLogin() {
         if (cancelled) return;
 
         if (user) {
-          const { data: partner } = await supabase
-            .from("partners")
-            .select("status")
-            .eq("email", user.email)
-            .eq("status", "active")
-            .maybeSingle();
+          const access = await verifyPartnerAccess();
 
-          if (partner) {
+          if (access?.ok) {
             router.replace("/partner/dashboard");
             return;
           }
@@ -317,17 +316,11 @@ export default function PartnerLogin() {
       return;
     }
 
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("id, status")
-      .eq("email", data.user.email)
-      .single();
+    const access = await verifyPartnerAccess();
 
-    if (!partner || partner.status !== "active") {
+    if (!access?.ok) {
       await supabase.auth.signOut();
-      setError(
-        "此帳號尚未通過合作夥伴審核。請先等候開通通知信，或確認是否使用申請時的 Email 登入。",
-      );
+      setError(access?.message || partnerLoginBlockMessage(access?.partner));
       setLoading(false);
       return;
     }
