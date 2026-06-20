@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Layout from "./Layout";
 import {
   ChevronRightIcon,
@@ -259,8 +260,11 @@ export default function Home() {
                   快速開通、免寄卡、合作簡單、即時分潤
                 </p>
                 {/* 藍色藥丸按鈕 */}
-                <button className="bg-[#2550D6] hover:bg-[#1a3ca8] transition-colors duration-300 text-white text-[14px] font-bold px-8 py-3.5 rounded-full flex items-center gap-3 w-fit shadow-lg">
-                  詳細を見る
+                <Link
+                  href="/register-distributor"
+                  className="bg-[#2550D6] hover:bg-[#1a3ca8] transition-colors duration-300 text-white text-[14px] font-bold px-8 py-3.5 rounded-full flex items-center gap-3 w-fit shadow-lg"
+                >
+                  立即申請合作
                   <svg
                     width="18"
                     height="18"
@@ -275,7 +279,7 @@ export default function Home() {
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                     <polyline points="12 5 19 12 12 19"></polyline>
                   </svg>
-                </button>
+                </Link>
               </div>
             </div>
 

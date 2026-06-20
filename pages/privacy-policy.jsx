@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 
-export default function LegacyMyProductsRedirect() {
+/** 舊路徑 /privacy-policy → /privacy */
+export default function PrivacyPolicyRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/partner/products");
+    router.replace("/privacy");
   }, [router]);
   return null;
 }

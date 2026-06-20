@@ -8,6 +8,7 @@ import { AuthProvider } from '../components/AuthProvider';
 import { CartProvider } from "../components/context/CartContext"; 
 import { UserProvider } from "../components/context/UserContext"; 
 import { PWA_LOGO, SITE_FAVICON } from "../lib/pwaConfig";
+import PartnerRecoveryRedirect from "../components/PartnerRecoveryRedirect";
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   return (
@@ -26,6 +27,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
           <AuthProvider>
             <NextUIProvider>
               <CartProvider>
+                <PartnerRecoveryRedirect />
                 <Component {...pageProps} />
               </CartProvider>
             </NextUIProvider>

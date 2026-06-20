@@ -40,7 +40,7 @@ export default function Footer() {
                 服務條款
               </Link>
               <Link
-                href="/privacy-policy"
+                href="/privacy"
                 className="hover:text-gray-900 transition-colors"
               >
                 隱私權政策

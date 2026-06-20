@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabaseClient";
 import FeaturedCountryCard, {
   type FeaturedCountry,
 } from "./FeaturedCountryCard";
+import SocialIconLinks, { SocialIconLinksMobile } from "./SocialIconLinks";
 
 import {
   UserIcon,
@@ -289,6 +290,11 @@ export default function Navbar({ className }: NavbarProps) {
 
             {/* 右側動作按鈕 */}
             <div className="flex items-center gap-2 lg:gap-3">
+              {/* 社群 icon — IG / LINE / FB */}
+              <div className="hidden sm:flex items-center pr-2 lg:pr-3 mr-1 lg:mr-2 border-r border-slate-100">
+                <SocialIconLinks size="sm" />
+              </div>
+
               {/* 🌟 橫向展開的會員狀態區塊 (電腦版) */}
               <div className="hidden lg:flex items-center pr-4 mr-2 border-r border-slate-100 gap-5">
                 {isLoggedIn ? (
@@ -584,6 +590,13 @@ export default function Navbar({ className }: NavbarProps) {
               </div>
 
               {/* 🌟 支援與聯絡區 */}
+              <div className="grid grid-cols-1 gap-2.5 pt-2 border-t border-slate-100">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-2 mb-1">
+                  追蹤我們
+                </p>
+                <SocialIconLinksMobile onNavigate={() => setMobileOpen(false)} />
+              </div>
+
               <div className="grid grid-cols-1 gap-2.5 pt-2 border-t border-slate-100">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-2 mb-1">
                   支援與聯絡

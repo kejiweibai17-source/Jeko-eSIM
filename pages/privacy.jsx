@@ -1,226 +1,149 @@
-"use client";
+import LegalPageLayout, { LegalSection } from "@/components/legal/LegalPageLayout";
 
-import Layout from "./Layout";
-import { motion } from "framer-motion";
-
-const PrivacyPolicy = () => {
-  const lastUpdated = "2026 年 2 月 28 日";
-
-  const ArrowIcon = () => (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="transition-transform group-hover:translate-x-[2px]"
-    >
-      <path
-        d="M8 5l8 7-8 7"
-        stroke="#fff"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-
-  // 🌟 將內容定義為簡單的數據結構，方便在下方以普通段落渲染
-  const policySections = [
-    {
-      number: "1",
-      title: "資訊收集",
-      content: (
-        <>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            當您使用我們的服務、註冊帳號或進行購買時，我們可能會收集以下資訊：
-          </p>
-          <ul className="list-disc pl-6 text-slate-600 space-y-2 marker:text-blue-500">
-            <li>基本資料：姓名、電子郵件地址。</li>
-            <li>
-              社群登入資訊：當您使用 Google、Facebook 或 LINE
-              登入時，我們會取得您授權提供的公開資訊。
-            </li>
-            <li>交易紀錄：購買的 eSIM 方案、付款狀態與訂單編號。</li>
-          </ul>
-        </>
-      ),
-    },
-    {
-      number: "2",
-      title: "資訊使用方式",
-      content: (
-        <>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            收集到的資訊將用於以下用途：
-          </p>
-          <ul className="list-disc pl-6 text-slate-600 space-y-2 marker:text-blue-500">
-            <li>發送您購買的 eSIM QR Code 郵件。</li>
-            <li>維護您的會員帳戶權益與歷史訂單查詢。</li>
-            <li>提供客戶支援與售後服務。</li>
-            <li>確保交易安全與防止詐欺。</li>
-          </ul>
-        </>
-      ),
-    },
-    {
-      number: "3",
-      title: "資料安全性與第三方服務",
-      content: (
-        <>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            我們致力於保護您的個人資料，並使用業界標準的技術（如 Supabase
-            安全驗證）來保護您的帳密與資訊。
-          </p>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            我們不會將您的個人資料出售或出租給第三方。但在必要情況下，我們會與以下服務商合作以完成交易：
-          </p>
-          <div className="bg-slate-50 p-5 rounded-2xl text-xs text-slate-500 flex flex-wrap gap-x-6 gap-y-2">
-            <span>
-              <strong>Supabase</strong>：負責帳號驗證與資料庫儲存。
-            </span>
-            <span>
-              <strong>藍新金流</strong>：負責處理付款程序。
-            </span>
-            <span>
-              <strong>MicroEsim</strong>：負責發送與啟用您的數位網卡。
-            </span>
-          </div>
-        </>
-      ),
-    },
-    {
-      number: "4",
-      title: "您的權利",
-      content: (
-        <p className="text-slate-600 leading-relaxed">
-          您隨時可以登入會員中心修改您的個人資訊。若您希望刪除帳號及相關所有個人資料，請透過官方
-          LINE 或電子郵件與我們聯繫。
-        </p>
-      ),
-    },
-    {
-      number: "5",
-      title: "聯絡我們",
-      content: (
-        <>
-          <p className="text-slate-600 leading-relaxed">
-            如果您對本隱私權政策有任何疑問，請聯繫：
-          </p>
-          <div className="bg-slate-50 p-5 rounded-2xl mt-5 text-sm text-slate-700 space-y-1">
-            <p className="font-bold text-slate-900">
-              極客網頁設計 - Jeko eSIM 團隊
-            </p>
-            <p>官方 LINE: @jeko_esim (範例)</p>
-            <p>Email: support@jeko.esim (範例)</p>
-          </div>
-        </>
-      ),
-    },
-  ];
-
+export default function PrivacyPage() {
   return (
-    <Layout>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.5 }}
-        className="min-h-screen bg-slate-50 pb-24 sm:pb-32"
-      >
-        {/* === 🌟 最上方 Hero Section === */}
-        <div className=" py-20 px-4 md:py-28 relative overflow-hidden text-stone-800">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12 relative z-10">
-            <div className="flex-1 text-center md:text-left">
-              <span className="inline-block text-xs font-bold  px-3 py-1 rounded-full mb-4">
-                Jeko eSIM - 隱私安全承諾
-              </span>
-              <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
-                隱私權政策
-              </h1>
+    <LegalPageLayout
+      title="隱私權政策"
+      subtitle="Jeko eSIM 重視您的個人資料保護。本政策說明我們如何蒐集、使用、保存及保障您的資訊。"
+      lastUpdated="2026 年 6 月 20 日"
+      seo={{
+        title: "隱私權政策｜Jeko eSIM",
+        description:
+          "Jeko eSIM 隱私權政策：說明個人資料蒐集、使用、保護方式與您的權利，保障出國上網服務使用者的資料安全。",
+      }}
+      siblingLink={{ href: "/terms", label: "查看服務條款" }}
+    >
+      <LegalSection title="一、政策適用範圍">
+        <p>
+          本隱私權政策適用於您使用 <strong>Jeko eSIM</strong> 網站（含合作夥伴專屬賣場
+          <code className="text-[#1a56db] bg-white/80 px-1 rounded">/p/代碼</code>
+          ）、行動應用程式、LINE 官方帳號及相關客服管道時，我們對您個人資料的處理方式。
+        </p>
+        <p>
+          「個人資料」指得以直接或間接識別您身分之資訊，包含姓名、Email、電話、訂單紀錄、裝置識別碼等。
+        </p>
+      </LegalSection>
 
-              <p className="  text-lg leading-relaxed max-w-2xl mx-auto md:mx-0">
-                Jeko eSIM
-                團隊（「我們」）致力於保護並尊重您的隱私權。本政策說明我們收集、使用和儲存您資訊的方式。
-              </p>
+      <LegalSection title="二、我們蒐集哪些資料">
+        <p>依您使用的服務不同，我們可能蒐集以下資料：</p>
+        <ul>
+          <li>
+            <strong>帳號資料</strong>：Email、暱稱、密碼（加密儲存）；若使用 Google、Facebook、LINE
+            登入，則取得您授權之公開基本資料。
+          </li>
+          <li>
+            <strong>訂單與交易</strong>：購買方案、金額、付款狀態、發票資訊、eSIM
+            啟用紀錄。
+          </li>
+          <li>
+            <strong>合作夥伴申請</strong>：公司／頻道名稱、聯絡人、電話、合作身份、推廣資源描述、專屬賣場代碼等。
+          </li>
+          <li>
+            <strong>技術紀錄</strong>：IP 位址、瀏覽器類型、Cookie、使用時間，用於安全防護與服務優化。
+          </li>
+          <li>
+            <strong>客服互動</strong>：您透過 Email、LINE 或網站表單提供的諮詢內容。
+          </li>
+        </ul>
+      </LegalSection>
 
-              {/* 外層容器：設定 group 以便控制內部所有動畫 */}
-              <a
-                href="/"
-                className="group relative mt-5 inline-flex items-center justify-center"
-              >
-                {/* 動畫效果 3 (背景影子層)：
-            這層固定在底部，當上方按鈕移動時，這層會露出來形成「殘影」或「立體厚度」。
-            顏色設定為比主色稍深的 Cyan (#0891b2) 
-          */}
-                <div className="absolute inset-0 h-full w-full rounded-full bg-[#2d70db] opacity-0 transition-all duration-300 group-hover:translate-x-1.5 group-hover:translate-y-1.5 group-hover:opacity-100" />
+      <LegalSection title="三、資料使用目的">
+        <ul>
+          <li>完成 eSIM 訂單、發送 QR Code 及售後支援。</li>
+          <li>建立與維護會員帳戶、訂單查詢及登入驗證。</li>
+          <li>審核合作夥伴申請、開通分潤賣場及結算分潤。</li>
+          <li>寄送交易通知、重要政策更新（您可拒收非必要行銷訊息）。</li>
+          <li>防止詐欺、濫用及確保平台安全。</li>
+          <li>依法律規定配合主管機關或司法單位之合法要求。</li>
+          <li>統計分析以改善網站體驗（採去識別化或聚合方式處理）。</li>
+        </ul>
+      </LegalSection>
 
-                {/* 主按鈕層 (Button 1 的樣式基礎)：
-            包含背景色 #0BAFD7、陰影、圓角。
-            Hover 時會向左上方移動 (-translate)，配合下方的影子層創造立體感。
-          */}
-                <div className="relative z-10 inline-flex items-center justify-center overflow-hidden rounded-full bg-[#1D55AE] px-8 py-3.5 font-bold text-white shadow-lg shadow-[#0BAFD7]/30 transition-all duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:shadow-[#243671]/40  ">
-                  {/* 動畫效果 2 (文字傾斜滑動)：
-              包含兩組完全相同的內容 (文字+Icon)。
-            */}
-                  <span className="relative inline-flex overflow-hidden">
-                    {/* 第一組內容：原本顯示的。Hover 時向右滑出並傾斜 (+150%, skew) */}
-                    <div className="flex items-center gap-3 transition-transform duration-500 group-hover:translate-x-[150%] group-hover:skew-x-12">
-                      查看其他條款
-                      <span className="grid h-6 w-6 place-items-center rounded-full bg-white/20">
-                        <ArrowIcon />
-                      </span>
-                    </div>
+      <LegalSection title="四、資料分享與第三方服務">
+        <p>
+          <strong>我們不會出售或出租您的個人資料。</strong>
+          為完成服務，我們可能與以下類型之合作方分享必要資料：
+        </p>
+        <ul>
+          <li>
+            <strong>Supabase</strong>：帳號驗證、資料庫儲存（伺服器位於安全雲端環境）。
+          </li>
+          <li>
+            <strong>金流服務商</strong>（如藍新金流、LINE Pay）：處理付款，我們不儲存完整信用卡號。
+          </li>
+          <li>
+            <strong>eSIM 供應商</strong>（如 MicroEsim 等）：完成 eSIM 開通與流量服務。
+          </li>
+          <li>
+            <strong>Email 發送服務</strong>：寄送訂單確認及 eSIM 啟用資訊。
+          </li>
+        </ul>
+        <p>
+          上述合作方僅能在提供服務所需範圍內使用您的資料，並須遵守相應之資料保護義務。
+        </p>
+      </LegalSection>
 
-                    {/* 第二組內容：原本隱藏在左側。Hover 時歸位並取消傾斜 (0%, no skew) */}
-                    <div className="absolute inset-0 flex items-center gap-3 transition-transform duration-500 -translate-x-[150%] skew-x-12 group-hover:translate-x-0 group-hover:skew-x-0">
-                      查看其他條款
-                      <span className="grid h-6 w-6 place-items-center rounded-full bg-white/20">
-                        <ArrowIcon />
-                      </span>
-                    </div>
-                  </span>
-                </div>
-              </a>
-            </div>
+      <LegalSection title="五、Cookie 與類似技術">
+        <p>
+          我們使用 Cookie 及類似技術以維持登入狀態、記住購物車及分析流量。
+          您可透過瀏覽器設定拒絕 Cookie，但部分功能（如保持登入）可能無法正常運作。
+        </p>
+      </LegalSection>
 
-            {/* 右側示意主圖 */}
-            <div className="w-[300px] h-[350px] bg-black rounded-3xl border-4 border-dashed border-white/20 flex items-center justify-center flex-shrink-0 shadow-inner">
-              <span className="text-xs text-white/30 tracking-widest">
-                [ 主圖位置 ]
-              </span>
-            </div>
-          </div>
-        </div>
+      <LegalSection title="六、資料保存期間">
+        <ul>
+          <li>會員帳號資料：於帳號存續期間及刪除後法定保存期限內。</li>
+          <li>交易紀錄：依稅法及商業會計法，至少保存 5 年。</li>
+          <li>合作夥伴資料：合作關係存續期間及終止後合理期間。</li>
+          <li>客服紀錄：依處理需要，通常保存 1 至 3 年。</li>
+        </ul>
+      </LegalSection>
 
-        {/* === 🌟 下方內容區域 (普通文字段落設計) === */}
-        <div className="max-w-4xl mx-auto px-4 mt-[-20px] md:mt-[-40px] relative z-20">
-          <div className=" p-8 md:p-16    max-w-none  ">
-            {/* 最後更新日期 */}
-            <p className="text-sm text-slate-400 mb-12 text-center border border-slate-100 inline-block px-4 py-1.5 rounded-full mx-auto flex justify-center w-fit">
-              最後更新日期：{lastUpdated}
-            </p>
+      <LegalSection title="七、您的權利">
+        <p>依個人資料保護法，您享有以下權利：</p>
+        <ul>
+          <li>查詢、閱覽您的個人資料。</li>
+          <li>請求補充或更正錯誤資料。</li>
+          <li>請求停止蒐集、處理或利用（可能影響服務使用）。</li>
+          <li>請求刪除帳號及相關資料（法定保存資料除外）。</li>
+        </ul>
+        <p>
+          請透過 Email 或 LINE 官方帳號提出申請，我們將於合理期間內回覆。若您認為權益受損，得向主管機關申訴。
+        </p>
+      </LegalSection>
 
-            {/* 🌟 渲染文字段落 */}
-            {policySections.map((section) => (
-              <section key={section.number} className="mb-12 last:mb-0">
-                <h2 className="text-2xl font-bold text-slate-800 mb-6  flex items-baseline gap-2">
-                  {section.title}
-                </h2>
-                <div className="content-block">{section.content}</div>
-              </section>
-            ))}
+      <LegalSection title="八、資料安全">
+        <p>
+          我們採取 HTTPS 加密傳輸、存取權限控管、密碼雜湊等業界標準措施保護您的資料。
+          然而，網際網路傳輸無法保證百分之百安全，請您亦妥善保管帳號密碼。
+        </p>
+      </LegalSection>
 
-            {/* 版權 Footer */}
-            <div className="mt-20 pt-10 border-t border-slate-100 text-center text-xs text-slate-400">
-              © 2026 極客網頁設計. All rights reserved. Jeko eSIM 團隊
-            </div>
-          </div>
-        </div>
+      <LegalSection title="九、未成年人">
+        <p>
+          本平台服務主要面向成年人。若您未滿 18
+          歲，請在法定代理人同意下使用本平台；我們不會故意蒐集未成年人之個人資料。
+        </p>
+      </LegalSection>
 
-        {/* 🌟 已修正：將 </div> 改回 </motion.div> */}
-      </motion.div>
-    </Layout>
+      <LegalSection title="十、政策修訂與聯絡">
+        <p>
+          我們可能因法規或服務調整而更新本政策，更新後將於本頁公告並註明日期。
+          重大變更時，我們將以 Email 或網站公告方式通知。
+        </p>
+        <p>隱私權相關問題，請聯繫：</p>
+        <ul>
+          <li>
+            Email：<a href="mailto:support@re-media.com">support@re-media.com</a>
+          </li>
+          <li>
+            LINE 官方帳號：
+            <a href="https://lin.ee/y6tdx5q" target="_blank" rel="noopener noreferrer">
+              加入好友
+            </a>
+          </li>
+        </ul>
+      </LegalSection>
+    </LegalPageLayout>
   );
-};
-
-export default PrivacyPolicy;
+}

@@ -519,9 +519,10 @@ export default function AccountPage() {
     ...(userRole === "partner"
       ? [
           {
-            id: "partner_dashboard",
-            label: "店鋪管理後台",
+            id: "partner_portal",
+            label: "夥伴管理後台 →",
             icon: BuildingStorefrontIcon,
+            external: "/partner/dashboard",
           },
         ]
       : []),
@@ -570,8 +571,12 @@ export default function AccountPage() {
                 {navItems.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id ? "bg-sky-50 text-sky-600" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                    onClick={() =>
+                      tab.external
+                        ? router.push(tab.external)
+                        : setActiveTab(tab.id)
+                    }
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id && !tab.external ? "bg-sky-50 text-sky-600" : tab.external ? "text-blue-600 hover:bg-blue-50" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
                   >
                     <tab.icon
                       className={`w-5 h-5 ${activeTab === tab.id ? "text-sky-500" : "text-slate-400"}`}
@@ -642,10 +647,10 @@ export default function AccountPage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => setActiveTab("partner_dashboard")}
+                        onClick={() => router.push("/partner/dashboard")}
                         className="relative z-10 w-full sm:w-auto bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-sky-50 transition shadow-md whitespace-nowrap"
                       >
-                        進入店鋪後台 &rarr;
+                        進入夥伴後台 →
                       </button>
                       <BuildingStorefrontIcon className="absolute -right-6 -bottom-6 w-48 h-48 text-white/10 -rotate-12 pointer-events-none" />
                     </div>

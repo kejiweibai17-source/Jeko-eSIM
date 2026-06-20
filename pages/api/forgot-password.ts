@@ -1,11 +1,8 @@
-// pages/api/forgot-password.ts （只示範寄信區段的修改點）
 import type { NextApiRequest, NextApiResponse } from "next";
-import nodemailer from "nodemailer";
+import { sendMail } from "../../lib/mailTransporter";
 
 const WP_BASE = "https://fegoesim.com";
-const APP_ORIGIN = process.env.APP_ORIGIN || "https://www.wmesim.com"; // 例: https://fegoesim.com 或 https://app.fegoesim.com
-const GMAIL_USER = process.env.GMAIL_USER || "wandmesim@gmail.com";
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || "hwoywmluqvsuluss";
+const APP_ORIGIN = process.env.APP_ORIGIN || "https://www.wmesim.com";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST")
@@ -49,15 +46,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )}&login=${encodeURIComponent(login)}`;
 
     if (to && key && login) {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-      });
-
-      await transporter.sendMail({
-        from: `eSIM 團隊 <${GMAIL_USER}>`,
+      await sendMail({
         to,
-        subject: `重設您的密碼`,
+        subject: "重設您的密碼",
+        text: `您好，您（帳號：${login}）申請了密碼重設。請在 30 分鐘內開啟以下連結完成重設：${appResetUrl}`,
         html: `
           <div style="font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.6">
             <p>您好，您（帳號：${login}）申請了密碼重設。</p>

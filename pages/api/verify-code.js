@@ -69,8 +69,14 @@ export default async function handler(req, res) {
     });
   }
 
-  // ✅ 驗證成功 → 一次性刪除
-  delete store[email];
+  // ✅ 驗證成功 — 保留紀錄供後續建立夥伴登入帳號（7 天內有效）
+  const APPLICATION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  record.verified = true;
+  record.verifiedAt = now;
+  record.applicationExpires = now + APPLICATION_WINDOW_MS;
+  delete record.code;
+  delete record.failCount;
+  delete record.lockedUntil;
 
   return res.status(200).json({ success: true, verified: true });
 }

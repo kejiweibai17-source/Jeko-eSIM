@@ -1,0 +1,66 @@
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    background-color 0.25s ease,
+    box-shadow 0.25s ease,
+    color 0.25s ease;
+}
+
+.btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.loading {
+  cursor: wait;
+  opacity: 0.92;
+}
+
+.success {
+  background-color: #16a34a !important;
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.35) !important;
+  transform: scale(1.02);
+}
+
+.error {
+  background-color: #dc2626 !important;
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 9999px;
+  animation: cfb-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+.check {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  animation: cfb-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cfb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cfb-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
