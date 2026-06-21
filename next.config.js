@@ -90,6 +90,10 @@ const nextConfig = {
         source: "/api/newebpay-notify",
         destination: "/api/newebpay-notify/",
       },
+      {
+        source: "/api/line/webhook",
+        destination: "/api/line/webhook/",
+      },
     ];
   },
 

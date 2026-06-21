@@ -5,12 +5,17 @@ import { NextResponse } from "next/server";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 只針對無斜線的 /api/newebpay-notify 做內部改寫
-  if (pathname === "/api/newebpay-notify") {
+  // trailingSlash: true 時，無尾斜線的 API 會 308；LINE Webhook 不接受 308
+  const apiRewriteTargets: Record<string, string> = {
+    "/api/newebpay-notify": "/api/newebpay-notify/",
+    "/api/line/webhook": "/api/line/webhook/",
+  };
+  const rewriteTo = apiRewriteTargets[pathname];
+  if (rewriteTo) {
     const url = req.nextUrl.clone();
-    url.pathname = "/api/newebpay-notify/"; // ✅ rewrite，不是 redirect
+    url.pathname = rewriteTo;
     const res = NextResponse.rewrite(url);
-    res.headers.set("X-Notify-Rewrite", "true"); // 方便你用 curl 檢查
+    res.headers.set("X-Api-Rewrite", rewriteTo);
     return res;
   }
 
@@ -19,5 +24,5 @@ export function middleware(req: NextRequest) {
 
 // 只比對這條路徑，減少不必要的開銷
 export const config = {
-  matcher: ["/api/newebpay-notify"],
+  matcher: ["/api/newebpay-notify", "/api/line/webhook"],
 };
