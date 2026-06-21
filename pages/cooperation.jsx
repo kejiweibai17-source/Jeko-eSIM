@@ -329,11 +329,11 @@ export default function Home() {
         ========================================= */}
           <div className="group relative w-full bg-[#1E4AD1] rounded-[32px] overflow-hidden cursor-pointer flex flex-col md:flex-row items-center p-0   transition-colors duration-300 hover:bg-[#163aab] shadow-lg">
             {/* 左側內嵌圖片 */}
-            <div className="w-full md:w-[35%] lg:w-[30%] h-[200px] md:h-[220px] rounded-l-[24px] overflow-hidden shrink-0">
+            <div className="w-full md:w-[35%] lg:w-[35%] h-[200px] md:h-[220px] rounded-l-[24px] overflow-hidden shrink-0">
               <img
-                src="https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&q=80&w=1000"
+                src="/images/何處何地都能快速使用｜快速上網｜Jeko_eSIM｜極客eSI.png"
                 alt="都農町WALT計画"
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-1000 "
               />
             </div>
 
@@ -375,7 +375,7 @@ export default function Home() {
         <div className="max-w-[1100px] mx-auto px-4 md:px-8">
           {/* 標題 */}
           <h2 className="text-[28px] md:text-[32px] font-black text-[#111] mb-8 tracking-wider">
-            最新ニュース
+            合作夥伴召集
           </h2>
 
           {/* 兩欄式網格佈局 */}

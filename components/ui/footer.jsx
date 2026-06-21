@@ -9,14 +9,10 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 pb-10 border-b border-gray-200">
           <div className="flex flex-col gap-6">
             {/* Logo */}
-            <Link href="/" className="inline-block">
-              <Image
-                src="/images/Logo/logo-no-bg.png"
-                alt="Jeko Logo"
-                width={160}
-                height={60}
-                className="h-auto w-[120px] object-contain"
-              />
+            <Link href="/" className="inline-block select-none">
+              <span className="text-[42px] md:text-[48px] font-black tracking-tight text-[#0A6CD0] leading-none">
+                JEKO
+              </span>
             </Link>
 
             {/* 頂部橫向選單 (仿照左上角小字選單) */}

@@ -230,7 +230,10 @@ export default function AccommodationRecommendSection() {
   const displayItems = filtered.slice(0, PREVIEW_COUNT);
 
   return (
-    <section className="w-full bg-[#f0f1f3] pb-12 lg:pb-16 pt-4">
+    <section
+      id="accommodation-recommend"
+      className="w-full bg-[#f0f1f3] pb-12 lg:pb-16 pt-4 scroll-mt-28"
+    >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         {/* 標題列（參考抽選會場版型） */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">

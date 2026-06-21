@@ -9,6 +9,7 @@ import {
   isUsageKeyword,
   extractIccidFromText,
   buildUsageHelpMessage,
+  buildWelcomeFollowMessage,
   getLineMessagingConfig,
   isLineBotConfigured,
 } from "../../../lib/lineBot";
@@ -241,17 +242,7 @@ export default async function handler(req, res) {
           event.source?.displayName,
         );
         if (event.replyToken) {
-          await replyLineMessage(event.replyToken, {
-            type: "text",
-            text: [
-              "👋 歡迎加入 Jeko eSIM！",
-              "",
-              "您可以：",
-              "• 傳「查詢用量」查最近 eSIM 流量",
-              "• 傳「開啟流量提醒」綁定低流量推播",
-              "• 直接貼上 ICCID 查詢",
-            ].join("\n"),
-          });
+          await replyLineMessage(event.replyToken, buildWelcomeFollowMessage());
         }
         continue;
       }

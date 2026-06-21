@@ -1,30 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import Link from "next/link";
-// 🌟 確保這裡正確引入你的 hook 檔案路徑
+import MaterialIcon from "@/components/MaterialIcon";
+import { useUser } from "@/components/context/UserContext";
+import { detectPushSupport } from "@/lib/pushSupport";
+import { buildLoginUrl } from "@/lib/authRedirect";
+import { buildInstallHintText } from "@/lib/deviceDetect";
 import { usePWAInstall } from "./usePWAInstall";
+import HeroCountryPlanPicker from "./HeroCountryPlanPicker";
 
-const ArrowIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    className="transition-transform group-hover:translate-x-[2px]"
-  >
-    <path
-      d="M8 5l8 7-8 7"
-      stroke="#fff"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+const LINE_OA_URL =
+  process.env.NEXT_PUBLIC_LINE_OA_URL || "https://line.me/R/ti/p/@593gvyzn";
 
 function FadeUp({
   children,
@@ -52,20 +43,131 @@ function FadeUp({
   );
 }
 
+function HeroCardAction({
+  children,
+  onClick,
+  href,
+  external,
+  icon,
+  loading,
+  className = "",
+}) {
+  const cls = `group flex flex-1 min-w-0 items-center gap-2.5 bg-white text-[#1d5cc5] hover:bg-white/95 disabled:opacity-60 rounded-lg px-3.5 py-3.5 transition-colors shadow-sm text-left ${className}`;
+
+  const inner = (
+    <>
+      <MaterialIcon name={icon} size={22} className="shrink-0 text-[#1d5cc5]" />
+      <span className="flex-1 min-w-0 text-sm font-bold leading-tight">
+        {loading ? "處理中…" : children}
+      </span>
+      <MaterialIcon
+        name="chevron_right"
+        size={20}
+        className="shrink-0 text-[#1d5cc5] group-hover:translate-x-0.5 transition-transform"
+      />
+    </>
+  );
+
+  if (href) {
+    if (external) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cls}
+        >
+          {inner}
+        </a>
+      );
+    }
+    return (
+      <Link href={href} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} disabled={loading} className={cls}>
+      {inner}
+    </button>
+  );
+}
+
+function HeroQuickTile({ label, icon, href, external, onClick }) {
+  const cls =
+    "group flex flex-col items-center justify-center gap-2 bg-white rounded-xl border border-slate-100 shadow-[0_2px_12px_rgba(15,23,42,0.06)] hover:shadow-[0_6px_20px_rgba(29,92,197,0.12)] hover:border-[#1d5cc5]/25 transition-all duration-200 p-3 sm:p-4 aspect-square w-full";
+
+  const inner = (
+    <>
+      <span className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#eef4ff] flex items-center justify-center group-hover:bg-[#dbeafe] transition-colors">
+        <MaterialIcon name={icon} size={24} className="text-[#1d5cc5]" />
+      </span>
+      <span className="text-[10px] sm:text-[11px] font-bold text-[#1d5cc5] text-center leading-snug line-clamp-2">
+        {label}
+      </span>
+    </>
+  );
+
+  if (href) {
+    if (external) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cls}
+        >
+          {inner}
+        </a>
+      );
+    }
+    return (
+      <Link href={href} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  );
+}
+
 const slides = [
+  {
+    image: "/images/Hero-banner-01.png",
+    imageMobile: "/images/hero-banner-mobile.png",
+  },
   { image: "/images/location/fcc7e825-9136-4c9d-8312-3309fe189b4c.png" },
   { image: "/images/location/korea-02.png" },
   { image: "/images/location/thailand-01.png" },
 ];
 
+function HeroSlideImage({ slide }) {
+  if (slide.imageMobile) {
+    return (
+      <picture>
+        <source media="(max-width: 767px)" srcSet={slide.imageMobile} />
+        <img src={slide.image} alt="Hero Banner" />
+      </picture>
+    );
+  }
+  return <img src={slide.image} alt="Hero Banner" />;
+}
+
 export default function Slider() {
+  const router = useRouter();
+  const { token } = useUser();
   const containerRef = useRef(null);
   const imagesRef = useRef([]);
   const titleRef = useRef(null);
   const indicatorsRef = useRef([]);
   const timerRef = useRef(null);
 
-  // 🌟 1. 取得 PWA 的全套狀態與方法
   const {
     isInstallable,
     installPWA,
@@ -73,24 +175,75 @@ export default function Slider() {
     isStandalone,
     subscribeToPush,
   } = usePWAInstall();
-  const [showPrompt, setShowPrompt] = useState(false);
 
-  // 🌟 2. 智慧按鈕點擊攔截邏輯
-  const handleActionClick = (e) => {
-    if (isStandalone) {
-      // 階段 A：已經是桌面 APP 模式了 ➔ 觸發推播訂閱
-      e.preventDefault();
-      subscribeToPush();
-    } else if (isInstallable) {
-      // 階段 B：Android/PC 可以一鍵安裝 ➔ 觸發安裝原生提示
-      e.preventDefault();
-      installPWA();
-    } else if (deviceType === "ios" || deviceType === "mac") {
-      // 階段 C：蘋果設備 ➔ 顯示對應的安裝教學彈窗
-      e.preventDefault();
-      setShowPrompt(true);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [promptMode, setPromptMode] = useState("push");
+  const [pushLoading, setPushLoading] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [installHint, setInstallHint] = useState(null);
+
+  useEffect(() => {
+    setInstallHint(buildInstallHintText({ isStandalone }));
+  }, [isStandalone]);
+
+  const installHintText = useMemo(
+    () => installHint ?? buildInstallHintText({ isStandalone }),
+    [installHint, isStandalone],
+  );
+
+  const needsAppleInstall =
+    !isStandalone && (deviceType === "ios" || deviceType === "mac");
+
+  const openInstallGuide = (mode) => {
+    setPromptMode(mode);
+    setShowPrompt(true);
+  };
+
+  const handleOpenPush = async () => {
+    if (needsAppleInstall) {
+      openInstallGuide("push");
+      return;
     }
-    // 階段 D：如果以上皆非，不呼叫 preventDefault，讓 Link 正常跳轉到 /product
+
+    const support = await detectPushSupport();
+    if (!support.supported) {
+      alert(support.hint || support.title || "此裝置不支援推播通知");
+      return;
+    }
+
+    setPushLoading(true);
+    try {
+      await subscribeToPush({ token });
+    } catch {
+      /* alert handled in hook */
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleTrafficAlert = () => {
+    if (needsAppleInstall) {
+      openInstallGuide("traffic");
+      return;
+    }
+    router.push("/data-query?setup=traffic#push-notification-section");
+  };
+
+  const handleInstallApp = () => {
+    if (isInstallable) {
+      installPWA();
+      return;
+    }
+    if (needsAppleInstall) {
+      openInstallGuide("push");
+    }
+  };
+
+  const scrollToSection = (hash) => {
+    const el = document.getElementById(hash.replace("#", ""));
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   useGSAP(
@@ -114,6 +267,7 @@ export default function Slider() {
           onComplete: () => {
             isAnimating = false;
             currentIndex = nextIndex;
+            setActiveSlide(nextIndex);
             startAutoplay();
           },
         });
@@ -231,31 +385,39 @@ export default function Slider() {
     { scope: containerRef },
   );
 
+  const promptTitle =
+    promptMode === "traffic"
+      ? "安裝 APP 以開啟流量提醒"
+      : "安裝 APP 以開啟推播";
+  const promptDesc =
+    promptMode === "traffic"
+      ? "iPhone 需先將 Jeko 加入主畫面，才能綁定 eSIM 並接收低流量推播。"
+      : "iPhone 需先將 Jeko 加入主畫面，才能接收推播通知。";
+
   return (
     <>
       <style>{`
-        .hero-container { position: relative; width: 100%; height: 100svh; overflow: hidden; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #fff; }
-        .slide-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; will-change: transform, opacity; }
+        .hero-wrap { position: relative; width: 100%; z-index: 30; isolation: isolate; background: #fff; }
+        .hero-container { position: relative; width: 100%; height: 90vh; height: 90svh; min-height: 480px; overflow: hidden; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #fff; z-index: 0; }
+        .images-wrapper { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+        .slide-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; will-change: transform, opacity; z-index: 0; }
         .slide-image img { width: 100%; height: 100%; object-fit: cover; }
-        .overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: 10; pointer-events: none; }
-        .top-left-logo { position: absolute; top: 2.5rem; left: 3rem; z-index: 20; display: flex; flex-direction: column; gap: 2px; }
-        .top-left-logo .logo-main { font-size: 1.25rem; font-weight: 900; letter-spacing: 0.05em; }
-        .top-left-logo .logo-sub { font-size: 0.6rem; letter-spacing: 0.15em; opacity: 0.8; }
+        .slide-image picture { display: block; width: 100%; height: 100%; }
+        .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.55) 100%); z-index: 10; pointer-events: none; }
+        .hero-headline { position: absolute; top: 18%; left: 0; right: 0; z-index: 20; padding: 0 clamp(1.25rem, 4vw, 3rem); }
+        .hero-headline-inner { max-width: 72rem; margin: 0 auto; }
+        .title-group { position: absolute; top: 0; left: 0; width: 100%; text-align: left; }
+        .hero-dock { position: relative; z-index: 60; isolation: isolate; }
+        .hero-slide-dots { position: absolute; left: clamp(1.25rem, 4vw, 3rem); bottom: clamp(7rem, 14vw, 10rem); z-index: 20; display: flex; align-items: center; gap-2; }
         .top-right-badge { position: absolute; top: 2.5rem; right: 0; z-index: 20; background-color: #2b65f6; padding: 0.6rem 1.5rem; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; }
-        .center-title { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; text-align: center; width: 100%; }
-        .title-group { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; }
-        .bottom-left-text { position: absolute; bottom: 2.5rem; left: 3rem; z-index: 20; font-size: 0.75rem; letter-spacing: 0.05em; }
-        .bottom-left-text .underline { border-bottom: 1px solid #fff; padding-bottom: 2px; margin-right: 6px; }
-        .bottom-right-scroll { position: absolute; bottom: 2.5rem; right: 3rem; z-index: 20; display: flex; align-items: center; gap: 1rem; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; opacity: 0.8; }
-        .bottom-right-scroll .arrow-circle { width: 24px; height: 24px; border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; }
-        .side-indicators { position: absolute; right: 3rem; top: 50%; transform: translateY(-50%); z-index: 20; display: flex; flex-direction: column; gap: 1.2rem; }
-        .indicator-item { position: relative; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
-        .indicator-item .dot { width: 3px; height: 3px; background-color: #fff; border-radius: 50%; }
-        .indicator-item .ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 50%; }
-        @media (max-width: 768px) { .top-left-logo { top: 1.5rem; left: 1.5rem; } .top-right-badge { top: 1.5rem; padding: 0.4rem 1rem; } .bottom-left-text { bottom: 1.5rem; left: 1.5rem; font-size: 0.65rem; } .bottom-right-scroll { display: none; } .side-indicators { right: 1.5rem; } }
+        @media (max-width: 768px) {
+          .hero-container { height: 90vh; height: 90svh; min-height: 420px; }
+          .hero-headline { top: 14%; }
+          .hero-slide-dots { bottom: clamp(5rem, 12vw, 8rem); }
+          .top-right-badge { top: 1.5rem; padding: 0.4rem 1rem; }
+        }
       `}</style>
 
-      {/* 🌟 智慧教學彈出視窗 (含 iOS 跳動防呆箭頭) */}
       <AnimatePresence>
         {showPrompt && (
           <motion.div
@@ -276,21 +438,17 @@ export default function Slider() {
               {deviceType === "ios" ? (
                 <>
                   <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 text-blue-500">
-                    <svg
-                      width="32"
-                      height="32"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M12 2.5l5 5h-3v7h-4v-7H7l5-5zM19 13v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6h2v6h10v-6h2z" />
-                    </svg>
+                    <MaterialIcon name="install_mobile" size={32} />
                   </div>
-                  <h3 className="text-xl font-bold mb-2">只需兩步，安裝完成</h3>
+                  <h3 className="text-xl font-bold mb-2">{promptTitle}</h3>
                   <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                    {promptDesc}
+                    <br />
+                    <br />
                     1. 點擊螢幕正下方的{" "}
                     <span className="font-bold text-blue-500">分享按鈕</span>
                     <br />
-                    2. 往下滑，選擇「
+                    2. 選擇「
                     <span className="font-bold text-black bg-gray-100 px-2 py-1 rounded">
                       加入主畫面
                     </span>
@@ -299,12 +457,11 @@ export default function Slider() {
                 </>
               ) : (
                 <div className="py-2">
-                  <h3 className="text-xl font-bold mb-4">安裝至 Mac Dock</h3>
+                  <h3 className="text-xl font-bold mb-4">{promptTitle}</h3>
                   <p className="text-gray-600 mb-6 text-sm">
                     請點擊螢幕左上角的「
-                    <span className="font-bold text-black">
-                      檔案
-                    </span>」選單 <br />
+                    <span className="font-bold text-black">檔案</span>」選單
+                    <br />
                     並選擇「
                     <span className="font-bold text-blue-500">
                       加入 Dock 中
@@ -315,6 +472,7 @@ export default function Slider() {
               )}
 
               <button
+                type="button"
                 onClick={() => setShowPrompt(false)}
                 className="w-full bg-gray-100 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-200 transition"
               >
@@ -322,7 +480,6 @@ export default function Slider() {
               </button>
             </motion.div>
 
-            {/* iOS 專屬防呆跳動箭頭 */}
             {deviceType === "ios" && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -336,129 +493,185 @@ export default function Slider() {
                 <span className="text-sm font-bold tracking-widest mb-1 shadow-black drop-shadow-md">
                   點擊這裡
                 </span>
-                <svg
-                  width="40"
-                  height="40"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="drop-shadow-lg"
-                >
-                  <path d="M12 5v14M19 12l-7 7-7-7" />
-                </svg>
+                <MaterialIcon name="keyboard_arrow_down" size={40} />
               </motion.div>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <section className="hero-container" ref={containerRef}>
-        <div className="images-wrapper">
-          {slides.map((slide, idx) => (
-            <div
-              key={`img-${idx}`}
-              className="slide-image"
-              ref={(el) => (imagesRef.current[idx] = el)}
-            >
-              <img src={slide.image} alt="Hero Banner" />
-            </div>
-          ))}
-        </div>
-        <div className="overlay"></div>
+      <div className="hero-wrap">
+        <section className="hero-container" ref={containerRef}>
+          <div className="images-wrapper">
+            {slides.map((slide, idx) => (
+              <div
+                key={`img-${idx}`}
+                className="slide-image"
+                ref={(el) => {
+                  imagesRef.current[idx] = el;
+                }}
+              >
+                <HeroSlideImage slide={slide} />
+              </div>
+            ))}
+          </div>
+          <div className="overlay" />
 
-        <div className="top-left-logo">
-          <span className="logo-main">連結您與世界的街口</span>
-          <span className="logo-sub">街口eSIM</span>
-        </div>
+          <div className="top-right-badge mt-[-40px] hidden lg:block">
+            Global eSIM
+          </div>
 
-        <div className="top-right-badge mt-[-40px] hidden lg:block">
-          Global eSIM
-        </div>
-
-        <div className="center-title" ref={titleRef}>
-          {slides.map((slide, idx) => (
-            <div key={`title-${idx}`} className="title-group" data-index={idx}>
-              <span className="text-[50px] tracking-widest !font-normal">
-                Jeko eSIM
-              </span>
-              <br></br>
-              <span className="text-[32px] tracking-widest !font-normal">
-                {" "}
-                連接您於世界的距離.
-              </span>
-
-              {/* 🌟 核心 CTA 按鈕區塊 */}
-              <FadeUp delay={0.12}>
-                <div className="mt-8 flex items-center justify-center">
+          <div className="hero-headline" ref={titleRef}>
+            <div className="hero-headline-inner relative min-h-[160px] md:min-h-[180px]">
+              {slides.map((slide, idx) => (
+                <div
+                  key={`title-${idx}`}
+                  className="title-group"
+                  data-index={idx}
+                >
+                  <h1 className="text-[44px] md:text-[68px] lg:text-[94px] font-black leading-[1.08] tracking-tight drop-shadow-lg italic">
+                    Jeko eSIM
+                  </h1>
+                  <p className="mt-2 md:mt-3 text-[15px] md:text-lg text-white/95 font-medium drop-shadow-md">
+                    街口eSIM 成為您連接世界的接口
+                  </p>
                   <Link
                     href="/product"
-                    onClick={handleActionClick} // 綁定攔截點擊事件
-                    className="group relative inline-flex items-center justify-center"
+                    className="mt-5 md:mt-6 inline-flex items-center gap-2 bg-white text-[#1d5cc5] hover:bg-white/95 rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-colors"
                   >
-                    <div className="absolute inset-0 h-full w-full rounded-full bg-[#efefef] opacity-0 transition-all duration-300 group-hover:translate-x-1.5 group-hover:translate-y-1.5 group-hover:opacity-100" />
-
-                    <div className="relative z-10 inline-flex items-center justify-center overflow-hidden rounded-full bg-[#1879c8] px-8 py-3.5 font-bold text-white shadow-lg shadow-[#0BAFD7]/30 transition-all duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:shadow-[#099EC3]/40">
-                      <span className="relative inline-flex overflow-hidden">
-                        <div className="flex items-center gap-3 transition-transform duration-500 group-hover:translate-x-[150%] group-hover:skew-x-12">
-                          {/* 🌟 第一層動態文字 */}
-                          {isStandalone
-                            ? "開啟推播通知"
-                            : isInstallable || deviceType !== "none"
-                              ? "安裝 APP 享受服務"
-                              : "了解更多服務"}
-                          <span className="grid h-6 w-6 place-items-center rounded-full bg-white/20">
-                            <ArrowIcon />
-                          </span>
-                        </div>
-
-                        <div className="absolute inset-0 flex items-center gap-3 transition-transform duration-500 -translate-x-[150%] skew-x-12 group-hover:translate-x-0 group-hover:skew-x-0">
-                          {/* 🌟 第二層動態文字 (Hover時顯示) */}
-                          {isStandalone
-                            ? "接收最新優惠"
-                            : isInstallable || deviceType !== "none"
-                              ? "立即加到桌面"
-                              : "查看詳細內容"}
-                          <span className="grid h-6 w-6 place-items-center rounded-full bg-white/20">
-                            <ArrowIcon />
-                          </span>
-                        </div>
-                      </span>
-                    </div>
+                    查看 eSIM 方案
+                    <MaterialIcon name="arrow_forward" size={18} />
                   </Link>
                 </div>
-              </FadeUp>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
 
-        <div className="bottom-left-text">
-          <span className="underline">NEW WORK STYLE</span>
-          <span>
-            from <strong> by Kesh</strong>
-          </span>
-        </div>
+          <div className="hero-slide-dots" aria-hidden>
+            {slides.map((_, idx) => (
+              <span
+                key={`dot-${idx}`}
+                className={`block rounded-full transition-all duration-300 ${
+                  activeSlide === idx
+                    ? "w-2 h-2 bg-white"
+                    : "w-1.5 h-1.5 bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
 
-        <div className="bottom-right-scroll">
-          SCROLL FOR CONTENTS
-          <div className="arrow-circle">↓</div>
-        </div>
+          <div className="side-indicators hidden">
+            {slides.map((_, idx) => (
+              <div
+                key={`ind-${idx}`}
+                className="indicator-item"
+                ref={(el) => {
+                  indicatorsRef.current[idx] = el;
+                }}
+              >
+                <div className="dot" />
+                <div className="ring" />
+              </div>
+            ))}
+          </div>
+        </section>
 
-        <div className="side-indicators">
-          {slides.map((_, idx) => (
-            <div
-              key={`ind-${idx}`}
-              className="indicator-item"
-              ref={(el) => (indicatorsRef.current[idx] = el)}
-            >
-              <div className="dot"></div>
-              <div className="ring"></div>
+        <FadeUp delay={0.06} distance={32} amount={0.12}>
+          <div className="hero-dock">
+            {/* 藍色功能卡：直接重疊 hero 底部（參考機場官網） */}
+            <div className="relative z-[60] px-4 sm:px-6 lg:px-8 -mt-[clamp(88px,12vw,128px)]">
+              <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="bg-[#3583d8] rounded-lg md:rounded-xl p-5 md:p-6 shadow-[0_8px_32px_rgba(29,92,197,0.35)]">
+                  <h3 className="text-white font-bold text-base md:text-lg mb-4 tracking-wide">
+                    {isStandalone ? "推播與警示" : "APP 與會員"}
+                  </h3>
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    {isStandalone ? (
+                      <>
+                        <HeroCardAction
+                          icon="notifications_active"
+                          onClick={handleOpenPush}
+                          loading={pushLoading}
+                        >
+                          開啟推播
+                        </HeroCardAction>
+                        <HeroCardAction
+                          icon="speed"
+                          onClick={handleTrafficAlert}
+                        >
+                          開啟流量警示
+                        </HeroCardAction>
+                      </>
+                    ) : (
+                      <>
+                        <HeroCardAction
+                          icon="install_mobile"
+                          onClick={handleInstallApp}
+                        >
+                          安裝 APP
+                        </HeroCardAction>
+                        <HeroCardAction
+                          icon="person_add"
+                          href={buildLoginUrl("/account")}
+                        >
+                          加入會員
+                        </HeroCardAction>
+                      </>
+                    )}
+                  </div>
+                  {isStandalone ? (
+                    <p className="mt-3 text-[11px] text-white/80 leading-relaxed">
+                      已安裝 APP，可開啟推播通知與 eSIM 低流量警示。
+                    </p>
+                  ) : (
+                    installHintText && (
+                      <p className="mt-3 text-[11px] text-white/80 leading-relaxed">
+                        {installHintText}
+                      </p>
+                    )
+                  )}
+                </div>
+
+                <HeroCountryPlanPicker />
+              </div>
             </div>
-          ))}
-        </div>
-      </section>
+
+            {/* 白底快捷區 */}
+            <div className="relative z-[55] bg-white pt-8 md:pt-10 pb-8 md:pb-10">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5 sm:gap-3 md:gap-4">
+                  <HeroQuickTile
+                    label="加入官方 LINE"
+                    icon="chat"
+                    href={LINE_OA_URL}
+                    external
+                  />
+                  <HeroQuickTile
+                    label="開啟 APP 流量提醒"
+                    icon="notifications_active"
+                    onClick={handleTrafficAlert}
+                  />
+                  <HeroQuickTile
+                    label="訂單查詢"
+                    icon="receipt_long"
+                    href="/account"
+                  />
+                  <HeroQuickTile
+                    label="租車包車"
+                    icon="directions_car"
+                    onClick={() => scrollToSection("car-rental-charter")}
+                  />
+                  <HeroQuickTile
+                    label="住宿"
+                    icon="hotel"
+                    onClick={() => scrollToSection("accommodation-recommend")}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </FadeUp>
+      </div>
     </>
   );
 }

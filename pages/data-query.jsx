@@ -75,6 +75,20 @@ export default function DataQueryPage() {
     if (saved) setIccid(saved);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("setup") !== "traffic") return;
+
+    const timer = window.setTimeout(() => {
+      document
+        .getElementById("push-notification-section")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const handleSearch = async (e) => {
     e.preventDefault();
     const value = normalizeIccid(iccid);

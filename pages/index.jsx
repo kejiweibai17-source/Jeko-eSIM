@@ -485,7 +485,7 @@ export default function Home() {
             }
           }
         `}</style>
-        <section className="mb-2">
+        <section className="mb-0">
           <Slider />
           {/* <InfiniteCarousel /> */}
         </section>

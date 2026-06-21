@@ -153,7 +153,10 @@ function CharterPhotoCard() {
 
 export default function CarRentalCharterSection() {
   return (
-    <section className="w-full bg-[#f0f1f3] pt-12 lg:pt-14 pb-4">
+    <section
+      id="car-rental-charter"
+      className="w-full bg-[#f0f1f3] pt-12 lg:pt-14 pb-4 scroll-mt-28"
+    >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         {/* 標題列：大標 + 右側副標（同參考圖） */}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-6 lg:mb-8">

@@ -103,6 +103,12 @@ interface NavbarProps {
   className?: string;
 }
 
+function isHomePath(path: string | null | undefined) {
+  if (!path) return true;
+  const normalized = path.replace(/\/+$/, "") || "/";
+  return normalized === "/" || normalized === "/index";
+}
+
 // --- 2. 導覽列資料 (桌面版) ---
 const navLinks = [
   { key: "home", label: "首頁", href: "/", hasMega: true },
@@ -127,13 +133,20 @@ const fullMenuLinks = [
 export default function Navbar({ className }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const isHomePage = isHomePath(pathname);
   const loginHref = buildLoginUrl(pathname || "/");
   const [mounted, setMounted] = useState(false);
 
   // --- UI 狀態管理 ---
   const [isScrolled, setIsScrolled] = useState(false);
+  const [navVisible, setNavVisible] = useState(true);
   const [openMega, setOpenMega] = useState<string>("none");
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  /** 捲動超過此距離才視為離開頁面頂部 */
+  const TOP_HIDE_THRESHOLD = 48;
+  /** 與 Tailwind lg 一致：手機版不收回 navbar */
+  const DESKTOP_NAV_MQ = "(min-width: 1024px)";
 
   // --- 登入狀態管理 (Dual-Engine) ---
   const { data: session, status: nextAuthStatus } = useSession();
@@ -146,13 +159,51 @@ export default function Navbar({ className }: NavbarProps) {
   );
   const [loadingCats, setLoadingCats] = useState<boolean>(true);
 
-  // 初始化掛載與滾動監聽
+  // 首頁桌面版：頂部收回 navbar。手機版與其他頁面一律顯示。
   useEffect(() => {
     setMounted(true);
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const desktopMq = window.matchMedia(DESKTOP_NAV_MQ);
+
+    const shouldAutoHide = () => isHomePage && desktopMq.matches;
+
+    const handleScroll = () => {
+      const y = window.scrollY;
+      setIsScrolled(y > 20);
+
+      if (!shouldAutoHide()) {
+        setNavVisible(true);
+        return;
+      }
+
+      if (y <= TOP_HIDE_THRESHOLD) {
+        setNavVisible(false);
+        setOpenMega("none");
+        setMobileOpen(false);
+      } else {
+        setNavVisible(true);
+      }
+    };
+
+    const syncNavVisibility = () => {
+      if (!shouldAutoHide()) {
+        setNavVisible(true);
+        return;
+      }
+      handleScroll();
+    };
+
+    syncNavVisibility();
+    desktopMq.addEventListener("change", syncNavVisibility);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      desktopMq.removeEventListener("change", syncNavVisibility);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isHomePage]);
 
   // 抓取 Supabase 會員
   useEffect(() => {
@@ -264,9 +315,17 @@ export default function Navbar({ className }: NavbarProps) {
       {/* ==========================================
           主要導覽列 (膠囊懸浮設計)
       ========================================== */}
-      <header
+      <motion.header
+        initial={false}
+        animate={{ y: navVisible ? 0 : "-110%" }}
+        transition={{
+          type: "spring",
+          stiffness: 420,
+          damping: 38,
+          mass: 0.85,
+        }}
         className={cn(
-          "fixed top-0 left-0 w-full z-[1000] transition-all duration-300 pointer-events-none",
+          "fixed top-0 left-0 w-full z-[1000] transition-[padding] duration-300 pointer-events-none",
           isScrolled ? "pt-2 px-2 md:px-4" : "pt-4 px-4 md:pt-6 md:px-6",
           className,
         )}
@@ -490,7 +549,7 @@ export default function Navbar({ className }: NavbarProps) {
             )}
           </AnimatePresence>
         </div>
-      </header>
+      </motion.header>
 
       {/* =========================================
           手機版下拉選單 (還原為白色的浮動清單)
@@ -499,8 +558,18 @@ export default function Navbar({ className }: NavbarProps) {
         {mobileOpen && (
           <motion.nav
             initial={{ opacity: 0, scale: 0.95, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
+            animate={{
+              opacity: navVisible ? 1 : 0,
+              scale: navVisible ? 1 : 0.95,
+              y: navVisible ? 0 : -10,
+            }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{
+              type: "spring",
+              stiffness: 420,
+              damping: 38,
+              mass: 0.85,
+            }}
             className="fixed top-[80px] left-0 right-0 w-[94%] mx-auto z-[10001] lg:hidden rounded-2xl bg-white shadow-2xl border border-black/5 p-5 overflow-y-auto max-h-[80vh]"
           >
             <div className="flex flex-col gap-6">
