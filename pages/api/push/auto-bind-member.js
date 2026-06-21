@@ -84,6 +84,10 @@ export default async function handler(req, res) {
       monitor_enabled: true,
     };
 
+    if (member.lineUserId) {
+      update.line_user_id = member.lineUserId;
+    }
+
     const err = await applyBindUpdate(endpoint, update);
     if (err) {
       return res.status(500).json({ error: "綁定失敗", detail: err.message });

@@ -1,163 +1,273 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
+import { useEffect, useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import PartnerAdminLayout, {
-  StatCard,
-  StatusBanner,
-} from "@/components/partner/PartnerAdminLayout";
-import { usePartnerSession, fetchPartnerStats, SITE_URL } from "@/lib/partnerAuth";
+import PartnerAdminLayout from "@/components/partner/PartnerAdminLayout";
 import {
-  ArrowTopRightOnSquareIcon,
-  ShoppingBagIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline";
+  ReportPeriodBar,
+  DobermanStatusBanner,
+  DobermanPanel,
+  DobermanTopCard,
+  fmt,
+  METRIC_HELP,
+  MetricPanelHeader,
+  prevMonthRange,
+  thisMonthRange,
+} from "@/components/partner/DobermanWidgets";
+import MaterialIcon from "@/components/MaterialIcon";
+import { usePartnerSession, fetchPartnerStats, SITE_URL } from "@/lib/partnerAuth";
+import { isSettledOrderStatus } from "@/lib/refundPolicy";
 
-function formatNTD(n) {
-  return `NT$ ${Math.round(Number(n) || 0).toLocaleString()}`;
+const DashboardDonut = dynamic(() => import("@/components/partner/PartnerDashboardDonut"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-36 flex items-center justify-center text-slate-400 text-xs animate-pulse">
+      載入圖表...
+    </div>
+  ),
+});
+
+function filterByRange(orders = [], start, end) {
+  const s = start ? new Date(start).getTime() : 0;
+  const e = end ? new Date(end + "T23:59:59").getTime() : Infinity;
+  return orders.filter((o) => {
+    const t = new Date(o.created_at).getTime();
+    return t >= s && t <= e;
+  });
+}
+
+function productShare(orders) {
+  const map = {};
+  for (const o of orders) {
+    const items = (() => {
+      try {
+        return Array.isArray(o.item_details) ? o.item_details : JSON.parse(o.item_details || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const key = items[0]?.name || "其他方案";
+    map[key] = (map[key] || 0) + (Number(o.partner_profit) || 0);
+  }
+  return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
+}
+
+function topProduct(orders) {
+  const map = {};
+  for (const o of orders) {
+    const items = (() => {
+      try {
+        return Array.isArray(o.item_details) ? o.item_details : JSON.parse(o.item_details || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const key = items[0]?.name || "其他方案";
+    map[key] = (map[key] || 0) + 1;
+  }
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  return sorted[0] || ["尚無資料", 0];
 }
 
 export default function PartnerDashboard() {
-  const router = useRouter();
   const { partner, store } = usePartnerSession();
   const [stats, setStats] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [rangeStart, setRangeStart] = useState(() => thisMonthRange().start);
+  const [rangeEnd, setRangeEnd] = useState(() => thisMonthRange().end);
 
   useEffect(() => {
     if (!partner) return;
-    setStatsLoading(true);
+    setLoading(true);
     fetchPartnerStats(partner.id, store?.id).then((s) => {
       setStats(s);
-      setStatsLoading(false);
+      setLoading(false);
     });
   }, [partner, store]);
 
+  const handleQuickRange = (type) => {
+    const r = type === "prevMonth" ? prevMonthRange() : thisMonthRange();
+    setRangeStart(r.start);
+    setRangeEnd(r.end);
+  };
+
+  const filtered = useMemo(
+    () => filterByRange(stats?.orders, rangeStart, rangeEnd),
+    [stats?.orders, rangeStart, rangeEnd],
+  );
+
+  const valid = useMemo(
+    () => filtered.filter((o) => isSettledOrderStatus(o.status)),
+    [filtered],
+  );
+
+  const totals = useMemo(() => {
+    const revenue = valid.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+    const profit = valid.reduce((s, o) => s + (Number(o.partner_profit) || 0), 0);
+    const cost = valid.reduce((s, o) => s + (Number(o.b2b_cost) || 0), 0);
+    const rate = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
+    return { revenue, profit, cost, count: valid.length, rate };
+  }, [valid]);
+
+  const share = useMemo(() => productShare(valid), [valid]);
+  const [topName, topCount] = useMemo(() => topProduct(valid), [valid]);
+
   const storeUrl = store ? `${SITE_URL}/p/${store.domain}` : null;
+  const isGood = !loading && totals.count > 0 && totals.profit > 0;
 
   return (
-    <PartnerAdminLayout title="儀表板">
-      {/* 頁面標題列 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-black text-slate-800">儀表板</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {store?.store_name || partner?.name} · 合作夥伴後台
-          </p>
-        </div>
-        {storeUrl && (
-          <a
-            href={storeUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-2 bg-[#1a3a6b] text-white text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-[#1344b5] transition shadow-sm"
-          >
-            預覽我的賣場 <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-          </a>
-        )}
-      </div>
+    <PartnerAdminLayout
+      title="儀表板"
+      footerNotice={
+        storeUrl
+          ? `賣場連結：${storeUrl} — 系統運作正常。`
+          : undefined
+      }
+    >
+      {/* ── レポート期間バー ── */}
+      <ReportPeriodBar
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        onRangeStartChange={setRangeStart}
+        onRangeEndChange={setRangeEnd}
+        onQuickRange={handleQuickRange}
+      />
 
-      {/* 狀態橫幅 */}
-      <StatusBanner
-        title={statsLoading ? "載入中..." : stats?.orderCount > 0 ? "營運良好" : "準備就緒，開始推廣！"}
+      {/* ── 良好バナー ── */}
+      <DobermanStatusBanner
+        loading={loading}
+        title={isGood ? "良好" : totals.count > 0 ? "推廣進行中" : "準備就緒"}
         message={
-          statsLoading
-            ? "正在讀取您的分潤數據..."
-            : stats?.orderCount > 0
-              ? `您已成功推廣 ${stats.orderCount} 筆訂單，累計分潤 ${formatNTD(stats.totalProfit)}。`
-              : "您的專屬賣場已開通，前往「選品管理」加入 eSIM 方案後即可開始推廣。"
+          loading
+            ? "正在讀取分潤數據..."
+            : totals.count > 0
+              ? `期間內 ${totals.count} 筆訂單・累計分潤 ${fmt(totals.profit)}・分潤率 ${totals.rate}%`
+              : "您的專屬賣場已開通，前往選品管理加入 eSIM 方案後即可開始推廣。"
         }
       />
 
-      {/* 統計卡片 — 參考 DOBERMAN 數字卡片 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          accent
-          label="累計分潤"
-          value={statsLoading ? "..." : formatNTD(stats?.totalProfit)}
-          sub="含待結算與已結算"
-        />
-        <StatCard
-          label="推廣訂單數"
-          value={statsLoading ? "..." : stats?.orderCount ?? 0}
-          sub="已完成 + 待付款"
-          onClick={() => router.push("/partner/orders")}
-        />
-        <StatCard
-          label="店鋪營收"
-          value={statsLoading ? "..." : formatNTD(stats?.totalRevenue)}
-          sub="客戶付款總額"
-        />
-        <StatCard
-          label="已上架商品"
-          value={statsLoading ? "..." : stats?.productCount ?? 0}
-          sub="可在賣場銷售"
-          onClick={() => router.push("/partner/products")}
+      {/* ── 2×2 メトリクスグリッド ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 border-x border-b border-slate-200">
+        <div className="border-b lg:border-r border-slate-200">
+          <DobermanPanel
+            icon="payments"
+            title="累計分潤（淨收益）"
+            help={METRIC_HELP.totalProfit}
+            rows={[{ label: "分潤合計", value: loading ? "..." : fmt(totals.profit) }]}
+          />
+        </div>
+        <div className="border-b border-slate-200">
+          <DobermanPanel
+            icon="language"
+            title="店鋪營收報表"
+            help={METRIC_HELP.storeRevenue}
+            rows={[
+              { label: "受取合計", arrow: "up", value: loading ? "..." : fmt(totals.revenue) },
+              { label: "底價成本", arrow: "down", value: loading ? "..." : fmt(totals.cost) },
+            ]}
+          />
+        </div>
+        <div className="lg:border-r border-b lg:border-b-0 border-slate-200">
+          <DobermanPanel
+            icon="filter_alt"
+            title="分潤率分析"
+            help={METRIC_HELP.profitRate}
+            rows={[
+              { label: "分潤率", value: loading ? "..." : totals.rate, unit: "%" },
+              { label: "有效訂單", value: loading ? "..." : totals.count, unit: "筆" },
+            ]}
+          />
+        </div>
+        <div>
+          <div className="bg-white border-0 overflow-hidden h-full">
+            <MetricPanelHeader
+              icon="donut_large"
+              title="商品分潤報表"
+              help={METRIC_HELP.productShare}
+            />
+            <div className="px-4 py-3">
+              <DashboardDonut
+                share={share}
+                totalProfit={totals.profit}
+                loading={loading}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── トップランキング行 ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-x border-b border-slate-200 mt-0">
+        <div className="border-b md:border-b-0 md:border-r border-slate-200">
+          <DobermanTopCard
+            icon="filter_list"
+            title="熱銷商品 Top"
+            help={METRIC_HELP.topProduct}
+            topLabel={topName}
+            count={topCount}
+            countUnit="張"
+          />
+        </div>
+        <DobermanTopCard
+          icon="category"
+          title="商品分類"
+          help={METRIC_HELP.productCategory}
+          topLabel={share[0]?.[0] || "—"}
+          count={share.length}
+          countUnit="種"
         />
       </div>
 
-      {/* 快捷操作 + 最近訂單 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 快捷操作 */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <h2 className="font-bold text-slate-800 mb-4 text-sm">快速操作</h2>
-          <div className="flex flex-col gap-2">
-            {[
-              {
-                href: "/partner/catalog",
-                icon: PlusIcon,
-                label: "加入 eSIM 商品",
-                desc: "從商品池選品上架",
-                color: "bg-blue-50 text-blue-700 hover:bg-blue-100",
-              },
-              {
-                href: "/partner/products",
-                icon: ShoppingBagIcon,
-                label: "管理商品定價",
-                desc: "設定各方案售價",
-                color: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-              },
-              {
-                href: "/partner/settings",
-                icon: ArrowTopRightOnSquareIcon,
-                label: "商店品牌設定",
-                desc: "修改店名與描述",
-                color: "bg-purple-50 text-purple-700 hover:bg-purple-100",
-              },
-            ].map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className={`flex items-center gap-3 p-3 rounded-xl transition ${action.color}`}
-              >
-                <action.icon className="w-5 h-5 shrink-0" />
-                <div>
-                  <p className="text-sm font-bold">{action.label}</p>
-                  <p className="text-xs opacity-70">{action.desc}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+      {/* ── 最近注文 + クイック操作 ── */}
+      <div className="p-5 space-y-4">
+        {/* クイック操作（4 アイコン） */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { href: "/partner/catalog", icon: "add_shopping_cart", label: "選品上架", sub: "從商品池加入方案" },
+            { href: "/partner/products", icon: "price_change", label: "定價管理", sub: "設定各方案售價" },
+            { href: "/partner/orders", icon: "receipt", label: "訂單列表", sub: "查看分潤明細" },
+            { href: "/partner/settings", icon: "store", label: "商店設定", sub: "編輯品牌資訊" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="bg-white border border-slate-200 rounded-sm p-4 flex flex-col items-center gap-2 hover:border-[#1a56db] hover:shadow-md transition group text-center"
+            >
+              <div className="w-11 h-11 rounded-full bg-[#1a3a6b] group-hover:bg-[#1a56db] text-white flex items-center justify-center transition">
+                <MaterialIcon name={item.icon} size={22} />
+              </div>
+              <p className="text-sm font-black text-slate-800">{item.label}</p>
+              <p className="text-[10px] text-slate-400">{item.sub}</p>
+            </Link>
+          ))}
         </div>
 
-        {/* 最近訂單 */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-bold text-slate-800 text-sm">最近推廣訂單</h2>
-            <Link href="/partner/orders" className="text-xs text-[#1a56db] font-bold hover:underline">
-              查看全部 →
+        {/* 最近注文テーブル */}
+        <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-[#f8fafc]">
+            <div className="flex items-center gap-2">
+              <MaterialIcon name="history" size={20} className="text-[#1a56db]" />
+              <h2 className="text-sm font-black text-slate-800">最近訂單</h2>
+            </div>
+            <Link
+              href="/partner/orders"
+              className="text-xs text-[#1a56db] font-bold hover:underline flex items-center gap-1"
+            >
+              查看全部
+              <MaterialIcon name="chevron_right" size={16} />
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+              <thead className="bg-white text-slate-500 text-xs border-b border-slate-100">
                 <tr>
-                  <th className="px-5 py-3 text-left font-bold">訂單 / 日期</th>
-                  <th className="px-5 py-3 text-left font-bold">金額</th>
-                  <th className="px-5 py-3 text-left font-bold">我的分潤</th>
-                  <th className="px-5 py-3 text-left font-bold">狀態</th>
+                  <th className="px-5 py-2.5 text-left font-bold">訂單 / 日期</th>
+                  <th className="px-5 py-2.5 text-left font-bold">金額</th>
+                  <th className="px-5 py-2.5 text-left font-bold">分潤</th>
+                  <th className="px-5 py-2.5 text-left font-bold">状態</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {statsLoading ? (
+                {loading ? (
                   <tr>
                     <td colSpan={4} className="text-center py-8 text-slate-400 text-sm">
                       載入中...
@@ -166,33 +276,33 @@ export default function PartnerDashboard() {
                 ) : (stats?.orders || []).slice(0, 5).length === 0 ? (
                   <tr>
                     <td colSpan={4} className="text-center py-10 text-slate-400 text-sm">
-                      尚無推廣訂單，分享您的賣場連結開始賺取分潤！
+                      尚無推廣訂單，分享賣場連結開始賺取分潤
                     </td>
                   </tr>
                 ) : (
                   (stats?.orders || []).slice(0, 5).map((order) => (
-                    <tr key={order.id} className="hover:bg-slate-50/50">
+                    <tr key={order.id} className="hover:bg-slate-50/60">
                       <td className="px-5 py-3">
                         <p className="font-mono font-bold text-slate-700 text-xs">
-                          {String(order.id).substring(0, 8)}
+                          {String(order.id).substring(0, 8).toUpperCase()}
                         </p>
                         <p className="text-xs text-slate-400 mt-0.5">
                           {new Date(order.created_at).toLocaleDateString("zh-TW")}
                         </p>
                       </td>
                       <td className="px-5 py-3 font-bold text-slate-800">
-                        {formatNTD(order.total_amount)}
+                        {fmt(order.total_amount)}
                       </td>
-                      <td className="px-5 py-3 font-bold text-emerald-600">
-                        +{formatNTD(order.partner_profit)}
+                      <td className="px-5 py-3 font-black text-[#1a56db]">
+                        +{fmt(order.partner_profit)}
                       </td>
                       <td className="px-5 py-3">
                         <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          className={`text-xs font-bold px-2 py-0.5 rounded-sm ${
                             order.status === "completed"
-                              ? "bg-emerald-100 text-emerald-700"
+                              ? "bg-[#d1fae5] text-[#065f46]"
                               : order.status === "pending"
-                                ? "bg-amber-100 text-amber-700"
+                                ? "bg-[#fef3c7] text-[#92400e]"
                                 : "bg-slate-100 text-slate-500"
                           }`}
                         >
@@ -210,26 +320,31 @@ export default function PartnerDashboard() {
             </table>
           </div>
         </div>
-      </div>
 
-      {/* 賣場連結分享 */}
-      {storeUrl && (
-        <div className="mt-6 bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase mb-1">我的專屬賣場連結</p>
-            <p className="font-mono text-sm text-[#1a56db] font-bold">{storeUrl}</p>
+        {/* 賣場連結 */}
+        {storeUrl && (
+          <div className="bg-white border border-slate-200 rounded-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <MaterialIcon name="link" size={22} className="text-[#1a56db] shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">專屬賣場連結</p>
+                <p className="font-mono text-sm text-[#1a56db] font-bold truncate">{storeUrl}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(storeUrl);
+                alert("連結已複製！");
+              }}
+              className="inline-flex items-center gap-2 bg-[#1a3a6b] text-white text-sm font-bold px-4 py-2 rounded-sm hover:bg-[#1a56db] transition shrink-0"
+            >
+              <MaterialIcon name="content_copy" size={16} />
+              複製
+            </button>
           </div>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(storeUrl);
-              alert("連結已複製！");
-            }}
-            className="bg-[#1a3a6b] text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-[#1344b5] transition shrink-0"
-          >
-            複製連結
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </PartnerAdminLayout>
   );
 }

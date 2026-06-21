@@ -76,7 +76,8 @@ export default function TermsPage() {
           </li>
           <li>
             eSIM 一經發送 QR Code
-            或完成啟用程序，原則上不予退款；尚未啟用且符合退款條件者，依客服審核結果辦理。
+            或完成啟用程序，原則上不予退款；尚未啟用且符合退款條件者，依{" "}
+            <a href="/refund-policy">退換貨政策</a> 及客服審核結果辦理。
           </li>
           <li>
             因電信商、天災、政策變更等不可抗力致服務中斷，本平台將盡力協調但不負完全賠償責任。
@@ -90,7 +91,7 @@ export default function TermsPage() {
           <li>
             <strong>專屬賣場網址</strong>：審核通過後，您將獲得專屬網址（格式：
             <code className="text-[#1a56db] bg-white/80 px-1 rounded">
-              jeko-esim.com.tw/p/您的代碼
+              www.jeko-esim.com.tw/p/您的代碼
             </code>
             ）。此代碼於申請時設定，原則上不可更改，請謹慎填寫。
           </li>

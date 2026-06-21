@@ -6,29 +6,14 @@ import Layout from "./Layout";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
 import { useSession, signOut } from "next-auth/react";
-
-import {
-  UserIcon,
-  QrCodeIcon,
-  Cog6ToothIcon,
-  LifebuoyIcon,
-  ArrowRightOnRectangleIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  InformationCircleIcon,
-  CreditCardIcon,
-  DevicePhoneMobileIcon,
-  ShieldCheckIcon,
-  BuildingStorefrontIcon,
-  CurrencyDollarIcon,
-  ChartBarIcon,
-  UsersIcon,
-  TicketIcon,
-  MagnifyingGlassIcon,
-  ArrowUturnLeftIcon,
-  PlusCircleIcon,
-  PencilSquareIcon,
-} from "@heroicons/react/24/outline";
+import { isSettledOrderStatus } from "@/lib/refundPolicy";
+import AccountShell, { NavyPanel, MetricTile } from "@/components/account/AccountShell";
+import AccountDashboardView from "@/components/account/AccountDashboardView";
+import AccountOrdersView from "@/components/account/AccountOrdersView";
+import AccountTrafficView from "@/components/account/AccountTrafficView";
+import AccountSettingsView from "@/components/account/AccountSettingsView";
+import AccountSupportView from "@/components/account/AccountSupportView";
+import AccountAdminDashboardView from "@/components/account/AccountAdminDashboardView";
 
 /* ========== 輔助工具 ========== */
 const formatNTDNoDecimals = (val) => {
@@ -70,38 +55,20 @@ const statusConfig = (status) => {
       label: "付款失敗",
       color: "bg-red-100 text-red-700 border-red-200",
     };
+  if (s === "refund_pending")
+    return {
+      label: "退款審核中",
+      color: "bg-amber-100 text-amber-800 border-amber-200",
+    };
+  if (s === "refunded")
+    return {
+      label: "已退款",
+      color: "bg-slate-100 text-slate-600 border-slate-200",
+    };
   return {
     label: status,
     color: "bg-slate-100 text-slate-700 border-slate-200",
   };
-};
-
-const getEsimQRCodes = (order) => {
-  if (!order || !order.qrcode_data) return [];
-  let data = order.qrcode_data;
-  if (typeof data === "string") {
-    try {
-      data = JSON.parse(data);
-    } catch (e) {
-      return [];
-    }
-  }
-  if (data && typeof data === "object" && !Array.isArray(data)) data = [data];
-  if (Array.isArray(data)) {
-    return data
-      .map((item) => {
-        const cleanSrc = String(item.qrcodeUrl || item.src || "")
-          .split(",")[0]
-          .trim();
-        return {
-          name: item.productName || item.name || "eSIM 方案",
-          src: cleanSrc,
-          topupId: item.topupId || item.topup_id || "無系統單號",
-        };
-      })
-      .filter((item) => item.src);
-  }
-  return [];
 };
 
 /* ========== 主元件 ========== */
@@ -351,6 +318,19 @@ export default function AccountPage() {
     }
   };
 
+  const getAuthHeaders = async () => {
+    const headers = {};
+    if (supabaseUser) {
+      const {
+        data: { session: supaSession },
+      } = await supabase.auth.getSession();
+      if (supaSession?.access_token) {
+        headers.Authorization = `Bearer ${supaSession.access_token}`;
+      }
+    }
+    return headers;
+  };
+
   const loadAdminData = async () => {
     setStatsLoading(true);
     try {
@@ -358,8 +338,8 @@ export default function AccountPage() {
         .from("orders")
         .select(`*, stores ( store_name )`)
         .order("created_at", { ascending: false });
-      const validOrders = (allOrdersData || []).filter(
-        (o) => o.status === "completed" || o.status === "pending",
+      const validOrders = (allOrdersData || []).filter((o) =>
+        isSettledOrderStatus(o.status),
       );
       const totalRevenue = validOrders.reduce(
         (sum, order) => sum + (Number(order.total_amount) || 0),
@@ -390,9 +370,7 @@ export default function AccountPage() {
         .order("created_at", { ascending: false });
       if (partnerOrders) {
         setPartnerAllOrders(partnerOrders);
-        const valid = partnerOrders.filter(
-          (o) => o.status === "completed" || o.status === "pending",
-        );
+        const valid = partnerOrders.filter((o) => isSettledOrderStatus(o.status));
         const totalProfit = valid.reduce(
           (sum, order) => sum + (Number(order.partner_profit) || 0),
           0,
@@ -479,10 +457,37 @@ export default function AccountPage() {
   };
 
   const handleProfileUpdate = async () => {
-    /* 略 */
+    if (!supabaseUser) return;
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: editingName, phone: editingPhone },
+      });
+      if (error) throw error;
+      setUser((u) => ({ ...u, name: editingName, phone: editingPhone }));
+      alert("✅ 個人資料已更新");
+    } catch (err) {
+      alert("更新失敗：" + err.message);
+    } finally {
+      setSavingProfile(false);
+    }
   };
+
   const handlePasswordUpdate = async () => {
-    /* 略 */
+    if (!newPassword || newPassword.length < 6) {
+      return alert("密碼至少需要 6 個字元");
+    }
+    setSavingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPassword("");
+      alert("✅ 密碼已更新");
+    } catch (err) {
+      alert("更新失敗：" + err.message);
+    } finally {
+      setSavingPassword(false);
+    }
   };
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -492,11 +497,11 @@ export default function AccountPage() {
 
   if (navStatus === "loading" || !isSupabaseChecked || !user) {
     return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">
-          <div className="animate-pulse flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
-            <p>驗證身分中...</p>
+      <Layout hideNavbar>
+        <div className="min-h-screen flex items-center justify-center bg-[#e8ecf1] text-slate-500">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-4 border-[#2b579a] border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-medium">驗證身分中…</p>
           </div>
         </div>
       </Layout>
@@ -506,464 +511,363 @@ export default function AccountPage() {
   const completedOrders = orders.filter((o) => o.status === "completed");
 
   const navItems = [
-    { id: "dashboard", label: "帳號總覽", icon: UserIcon },
+    { id: "dashboard", label: "首頁總覽", icon: "dashboard" },
+    { id: "orders", label: "我的 eSIM 訂單", icon: "qr_code_2" },
+    { id: "traffic", label: "查詢流量", icon: "speed" },
     ...(userRole === "admin"
-      ? [
-          {
-            id: "admin_dashboard",
-            label: "系統總控制台",
-            icon: ShieldCheckIcon,
-          },
-        ]
+      ? [{ id: "admin_dashboard", label: "系統總控", icon: "admin_panel_settings" }]
       : []),
     ...(userRole === "partner"
       ? [
           {
             id: "partner_portal",
-            label: "夥伴管理後台 →",
-            icon: BuildingStorefrontIcon,
+            label: "夥伴後台",
+            icon: "store",
             external: "/partner/dashboard",
           },
         ]
       : []),
-    { id: "orders", label: "我的 eSIM (訂單)", icon: QrCodeIcon },
-    { id: "settings", label: "設定與安全", icon: Cog6ToothIcon },
-    { id: "support", label: "安裝與支援", icon: LifebuoyIcon },
+    { id: "settings", label: "帳號設定", icon: "manage_accounts" },
+    { id: "support", label: "安裝與支援", icon: "help_center" },
   ];
 
-  return (
-    <Layout>
-      <div className="min-h-screen w-full bg-[#F4F7FB] px-4 py-24 mt-[100px] sm:py-32">
-        <div className="max-w-[1200px] mx-auto flex flex-col lg:flex-row gap-8">
-          <aside className="w-full lg:w-[280px] shrink-0">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden sticky top-24">
-              <div className="p-6 bg-gradient-to-br from-sky-500 to-blue-600 text-white text-center">
-                {user?.image ? (
-                  <img
-                    src={user.image}
-                    alt="Avatar"
-                    className="w-16 h-16 mx-auto rounded-full border-2 border-white/20 shadow-inner mb-3 object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm mb-3 text-2xl font-bold uppercase shadow-inner">
-                    {user?.name?.charAt(0) || user?.email?.charAt(0) || "U"}
-                  </div>
-                )}
-                <h2 className="text-lg font-bold truncate">
-                  {user?.name || "會員"}
-                </h2>
-                <p className="text-xs text-sky-100 truncate mt-1">
-                  {user?.email}
-                </p>
-                {userRole === "admin" && (
-                  <span className="inline-block mt-2 px-2 py-0.5 bg-slate-800 text-white text-[10px] font-bold rounded uppercase tracking-widest shadow-sm">
-                    系統管理員
-                  </span>
-                )}
-                {userRole === "partner" && (
-                  <span className="inline-block mt-2 px-2 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded uppercase tracking-widest shadow-sm">
-                    官方認證店長
-                  </span>
-                )}
-              </div>
+  const pageTitles = {
+    dashboard: "首頁總覽",
+    orders: "我的 eSIM 訂單",
+    traffic: "查詢流量",
+    admin_dashboard: "系統總控制台",
+    partner_dashboard: "店鋪管理",
+    settings: "帳號設定",
+    support: "安裝與支援",
+  };
 
-              <nav className="p-3 flex flex-col gap-1">
-                {navItems.map((tab) => (
+  return (
+    <Layout hideNavbar>
+      <AccountShell
+        title={pageTitles[activeTab] || "會員中心"}
+        user={user}
+        userRole={userRole}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        navItems={navItems}
+        onLogout={handleLogout}
+        orderBadge={orders.length}
+      >
+      <AnimatePresence mode="wait">
+        {activeTab === "dashboard" && (
+          <motion.div
+            key="dashboard"
+            className="w-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+          >
+            <AccountDashboardView
+              user={user}
+              userRole={userRole}
+              partnerData={partnerData}
+              orders={orders}
+              completedOrders={completedOrders}
+              partnerStats={partnerStats}
+              adminStats={adminStats}
+              statsLoading={statsLoading}
+              onTabChange={setActiveTab}
+              onPartnerPortal={() => router.push("/partner/dashboard")}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "admin_dashboard" && userRole === "admin" && (
+          <motion.div
+            key="admin"
+            className="w-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+          >
+            <AccountAdminDashboardView
+              adminStats={adminStats}
+              adminAllOrders={adminAllOrders}
+              groupedStores={groupedStores}
+              statsLoading={statsLoading}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "partner_dashboard" && userRole === "partner" && (
+          <motion.div
+            key="partner_dashboard"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6 w-full"
+          >
+            <div>
+              <h2 className="text-2xl font-bold text-[#202223]">店鋪管理後台</h2>
+              <p className="text-sm text-[#6d7175] mt-1">
+                專屬 {partnerStoreInfo?.store_name || partnerData?.name} 的業績與設定
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MetricTile
+                icon="account_balance_wallet"
+                label="累積分潤"
+                value={
+                  statsLoading
+                    ? "…"
+                    : `NT$ ${formatNTDNoDecimals(partnerStats.profit)}`
+                }
+                accent="green"
+              />
+              <MetricTile
+                icon="trending_up"
+                label="成功推廣訂單"
+                value={statsLoading ? "…" : partnerStats.orderCount}
+                accent="blue"
+              />
+            </div>
+
+            <NavyPanel title="店鋪管理" icon="store">
+              <div className="flex border-b border-[#e1e3e5] -mt-2 -mx-5 px-5 mb-5">
+                {[
+                  { id: "my_orders", label: "本店訂單" },
+                  { id: "coupons", label: "折扣碼" },
+                  { id: "store_settings", label: "商店設定" },
+                ].map((sub) => (
                   <button
-                    key={tab.id}
-                    onClick={() =>
-                      tab.external
-                        ? router.push(tab.external)
-                        : setActiveTab(tab.id)
-                    }
-                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id && !tab.external ? "bg-sky-50 text-sky-600" : tab.external ? "text-blue-600 hover:bg-blue-50" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setPartnerSubTab(sub.id)}
+                    className={`px-4 py-3 text-sm font-semibold border-b-2 -mb-px transition ${
+                      partnerSubTab === sub.id
+                        ? "border-[#008060] text-[#008060]"
+                        : "border-transparent text-[#6d7175] hover:text-[#202223]"
+                    }`}
                   >
-                    <tab.icon
-                      className={`w-5 h-5 ${activeTab === tab.id ? "text-sky-500" : "text-slate-400"}`}
-                    />
-                    {tab.label}
+                    {sub.label}
                   </button>
                 ))}
-                <div className="h-px bg-slate-100 my-2 mx-2" />
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-all"
-                >
-                  <ArrowRightOnRectangleIcon className="w-5 h-5 text-red-400" />
-                  安全登出
-                </button>
-              </nav>
-            </div>
-          </aside>
-
-          <main className="flex-1 min-h-[500px]">
-            <AnimatePresence mode="wait">
-              {/* === 一般總覽 Dashboard === */}
-              {activeTab === "dashboard" && (
-                <motion.div
-                  key="dashboard"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  {userRole === "admin" && (
-                    <div className="bg-slate-800 text-white p-6 md:p-8 rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-700 relative overflow-hidden">
-                      <div className="relative z-10 flex items-center gap-4">
-                        <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                          <ShieldCheckIcon className="w-8 h-8 text-sky-400" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-bold">
-                            歡迎回來，系統總監
-                          </h2>
-                          <p className="text-slate-400 text-sm mt-1">
-                            您可以切換至總控制台查看全站營收與數據。
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setActiveTab("admin_dashboard")}
-                        className="relative z-10 w-full sm:w-auto bg-sky-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-sky-400 transition shadow-md whitespace-nowrap"
-                      >
-                        前往總控制台 &rarr;
-                      </button>
-                      <ShieldCheckIcon className="absolute -right-6 -top-6 w-48 h-48 text-white/5 -rotate-12 pointer-events-none" />
-                    </div>
-                  )}
-                  {userRole === "partner" && partnerData && (
-                    <div className="bg-gradient-to-r from-sky-500 to-blue-600 text-white p-6 md:p-8 rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
-                      <div className="relative z-10 flex items-center gap-4">
-                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                          <BuildingStorefrontIcon className="w-8 h-8 text-white" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-bold">
-                            哈囉，{partnerData.name} 店長
-                          </h2>
-                          <p className="text-sky-100 text-sm mt-1">
-                            您可以切換至專屬後台，查看最新業績與設定折扣碼。
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => router.push("/partner/dashboard")}
-                        className="relative z-10 w-full sm:w-auto bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-sky-50 transition shadow-md whitespace-nowrap"
-                      >
-                        進入夥伴後台 →
-                      </button>
-                      <BuildingStorefrontIcon className="absolute -right-6 -bottom-6 w-48 h-48 text-white/10 -rotate-12 pointer-events-none" />
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                        <QrCodeIcon className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-black text-slate-800">
-                          {completedOrders.length}
-                        </p>
-                        <p className="text-xs font-semibold text-slate-500 uppercase">
-                          有效 eSIM 數
-                        </p>
-                      </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-                      <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                        <CheckCircleIcon className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-black text-slate-800">
-                          {orders.length}
-                        </p>
-                        <p className="text-xs font-semibold text-slate-500 uppercase">
-                          歷史訂單總數
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* === 系統管理員後台 (Admin Dashboard) === */}
-              {activeTab === "admin_dashboard" && userRole === "admin" && (
-                <motion.div
-                  key="admin_dashboard"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  {/* Admin 內容省略，與之前完全相同 */}
-                  <h2 className="text-2xl font-black text-slate-800">
-                    系統總控制台
-                  </h2>
-                  {/* ... */}
-                </motion.div>
-              )}
-
-              {/* === 🌟 店鋪管理後台 (Partner Dashboard) === */}
-              {activeTab === "partner_dashboard" && userRole === "partner" && (
-                <motion.div
-                  key="partner_dashboard"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <h2 className="text-2xl font-black text-slate-800">
-                        店鋪管理後台
-                      </h2>
-                      <p className="text-slate-500 text-sm mt-1">
-                        專屬 {partnerStoreInfo?.store_name || partnerData?.name}{" "}
-                        的業績與設定中心。
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 relative overflow-hidden">
-                      <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl relative z-10">
-                        <CurrencyDollarIcon className="w-6 h-6" />
-                      </div>
-                      <div className="relative z-10">
-                        <p className="text-2xl font-black text-slate-800">
-                          {statsLoading
-                            ? "..."
-                            : `NT$ ${formatNTDNoDecimals(partnerStats.profit)}`}
-                        </p>
-                        <p className="text-xs font-semibold text-slate-500 uppercase">
-                          我的總分潤 (累積)
-                        </p>
-                      </div>
-                      <CurrencyDollarIcon className="absolute -right-4 -bottom-4 w-20 h-20 text-emerald-50 -rotate-12 pointer-events-none" />
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 relative overflow-hidden">
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-xl relative z-10">
-                        <ChartBarIcon className="w-6 h-6" />
-                      </div>
-                      <div className="relative z-10">
-                        <p className="text-2xl font-black text-slate-800">
-                          {statsLoading ? "..." : partnerStats.orderCount}
-                        </p>
-                        <p className="text-xs font-semibold text-slate-500 uppercase">
-                          成功推廣訂單數
-                        </p>
-                      </div>
-                      <ChartBarIcon className="absolute -right-4 -bottom-4 w-20 h-20 text-blue-50 -rotate-12 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="flex border-b border-slate-100">
-                      {[
-                        { id: "my_orders", label: "本店訂單明細" },
-                        { id: "coupons", label: "專屬折扣碼" },
-                        { id: "store_settings", label: "商店設定" },
-                      ].map((sub) => (
-                        <button
-                          key={sub.id}
-                          onClick={() => setPartnerSubTab(sub.id)}
-                          className={`flex-1 py-4 text-sm font-bold text-center border-b-2 transition-colors ${partnerSubTab === sub.id ? "border-sky-500 text-sky-600 bg-sky-50/50" : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
-                        >
-                          {sub.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="p-6">
-                      {/* --- 本店訂單明細 --- */}
+              </div>
                       {partnerSubTab === "my_orders" && (
-                        <div>
-                          <h3 className="text-lg font-bold text-slate-800 mb-6">
-                            推廣成效列表
-                          </h3>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                              <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[11px] tracking-wider">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-sm min-w-[520px]">
+                            <thead>
+                              <tr className="text-[11px] uppercase text-[#6d7175] border-b border-[#e1e3e5]">
+                                <th className="pb-2 font-semibold">訂單 / 日期</th>
+                                <th className="pb-2 font-semibold">金額</th>
+                                <th className="pb-2 font-semibold">分潤</th>
+                                <th className="pb-2 font-semibold text-center">狀態</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {statsLoading ? (
                                 <tr>
-                                  <th className="px-4 py-3 rounded-tl-lg">
-                                    訂單編號 / 日期
-                                  </th>
-                                  <th className="px-4 py-3">訂單總金額</th>
-                                  <th className="px-4 py-3">我的分潤</th>
-                                  <th className="px-4 py-3 text-center rounded-tr-lg">
-                                    付款狀態
-                                  </th>
+                                  <td colSpan={4} className="py-8 text-center text-[#6d7175]">
+                                    載入中…
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100">
-                                {statsLoading ? (
-                                  <tr>
-                                    <td
-                                      colSpan="4"
-                                      className="text-center py-8 text-slate-400"
-                                    >
-                                      資料讀取中...
-                                    </td>
-                                  </tr>
-                                ) : partnerAllOrders.length === 0 ? (
-                                  <tr>
-                                    <td
-                                      colSpan="4"
-                                      className="text-center py-8 text-slate-400"
-                                    >
-                                      目前還沒有推廣成功紀錄喔！
-                                    </td>
-                                  </tr>
-                                ) : (
-                                  partnerAllOrders.map((order) => {
-                                    const conf = statusConfig(order.status);
-                                    return (
-                                      <tr
-                                        key={order.id}
-                                        className="hover:bg-slate-50/50 transition"
-                                      >
-                                        <td className="px-4 py-4">
-                                          <div className="font-mono font-bold text-slate-700">
-                                            {order.id.substring(0, 8)}
-                                          </div>
-                                          <div className="text-xs text-slate-400 mt-1">
-                                            {formatDate(order.created_at)}
-                                          </div>
-                                        </td>
-                                        <td className="px-4 py-4 font-bold text-slate-800">
-                                          NT${" "}
-                                          {formatNTDNoDecimals(
-                                            order.total_amount,
-                                          )}
-                                        </td>
-                                        <td className="px-4 py-4 font-black text-emerald-600">
-                                          + NT${" "}
-                                          {formatNTDNoDecimals(
-                                            order.partner_profit,
-                                          )}
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                          <span
-                                            className={`px-2.5 py-1 text-[11px] font-bold rounded-md border ${conf.color}`}
-                                          >
-                                            {conf.label}
-                                          </span>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
+                              ) : partnerAllOrders.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="py-8 text-center text-[#6d7175]">
+                                    尚無推廣紀錄
+                                  </td>
+                                </tr>
+                              ) : (
+                                partnerAllOrders.map((order) => {
+                                  const conf = statusConfig(order.status);
+                                  return (
+                                    <tr key={order.id} className="border-b border-[#f1f2f4]">
+                                      <td className="py-3">
+                                        <div className="font-mono font-semibold text-xs">
+                                          #{order.id}
+                                        </div>
+                                        <div className="text-[11px] text-[#8c9196] mt-0.5">
+                                          {formatDate(order.created_at)}
+                                        </div>
+                                      </td>
+                                      <td className="py-3 font-semibold">
+                                        NT$ {formatNTDNoDecimals(order.total_amount)}
+                                      </td>
+                                      <td className="py-3 font-semibold text-[#008060]">
+                                        + NT$ {formatNTDNoDecimals(order.partner_profit)}
+                                      </td>
+                                      <td className="py-3 text-center">
+                                        <span
+                                          className={`text-[11px] font-bold px-2 py-0.5 rounded border ${conf.color}`}
+                                        >
+                                          {conf.label}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
                         </div>
                       )}
 
-                      {/* --- 專屬折扣碼系統 --- */}
                       {partnerSubTab === "coupons" && (
-                        <div>
-                          <h3 className="text-lg font-bold text-slate-800 mb-6">
-                            折扣碼管理
-                          </h3>
+                        <div className="space-y-4 max-w-lg">
+                          <div className="grid grid-cols-2 gap-3">
+                            <input
+                              type="text"
+                              placeholder="折扣碼"
+                              value={newCoupon.code}
+                              onChange={(e) =>
+                                setNewCoupon({ ...newCoupon, code: e.target.value })
+                              }
+                              className="px-3 py-2 border border-[#c9cccf] rounded-lg text-sm"
+                            />
+                            <input
+                              type="number"
+                              placeholder="折抵金額"
+                              value={newCoupon.discount_value}
+                              onChange={(e) =>
+                                setNewCoupon({
+                                  ...newCoupon,
+                                  discount_value: e.target.value,
+                                })
+                              }
+                              className="px-3 py-2 border border-[#c9cccf] rounded-lg text-sm"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleCreateCoupon}
+                            disabled={isCreatingCoupon}
+                            className="px-4 py-2 bg-[#202223] text-white text-sm font-semibold rounded-lg disabled:opacity-50"
+                          >
+                            {isCreatingCoupon ? "建立中…" : "新增折扣碼"}
+                          </button>
+                          {partnerCoupons.length > 0 && (
+                            <ul className="divide-y divide-[#f1f2f4] text-sm">
+                              {partnerCoupons.map((c) => (
+                                <li key={c.id} className="py-2 flex justify-between">
+                                  <span className="font-mono font-bold">{c.code}</span>
+                                  <span className="text-[#6d7175]">
+                                    -{c.discount_value}
+                                    {c.discount_type === "percent" ? "%" : " 元"}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                       )}
 
-                      {/* --- 🌟 核心修改：商店設定 (可編輯狀態) --- */}
                       {partnerSubTab === "store_settings" && (
-                        <div className="max-w-xl">
-                          <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                            <PencilSquareIcon className="w-5 h-5 text-sky-500" />{" "}
-                            前台商店設定
-                          </h3>
-                          <p className="text-sm text-slate-500 mb-6">
-                            在此修改您的店鋪外觀資訊，儲存後將立即同步至您的專屬商店前台。
+                        <div className="max-w-xl space-y-4">
+                          <p className="text-sm text-[#6d7175]">
+                            修改店鋪名稱後將同步至專屬賣場前台。
                           </p>
-
                           {partnerStoreInfo ? (
-                            <div className="space-y-6">
+                            <>
                               <div>
-                                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                                <label className="block text-xs font-semibold text-[#6d7175] mb-1">
                                   分店顯示名稱
                                 </label>
                                 <input
                                   type="text"
                                   value={editStoreName}
-                                  onChange={(e) =>
-                                    setEditStoreName(e.target.value)
-                                  }
-                                  placeholder="請輸入您的店鋪名稱"
-                                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 transition"
+                                  onChange={(e) => setEditStoreName(e.target.value)}
+                                  className="w-full px-3 py-2.5 border border-[#c9cccf] rounded-lg text-sm"
                                 />
-                                <p className="text-[11px] text-slate-400 mt-1.5">
-                                  這將會顯示在您的商店首頁、結帳畫面與導覽列上。
-                                </p>
                               </div>
-
                               <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">
-                                  專屬網址 (Slug) -{" "}
-                                  <span className="text-red-400">不可修改</span>
+                                <label className="block text-xs font-semibold text-[#6d7175] mb-1">
+                                  專屬網址（不可修改）
                                 </label>
-                                <div className="flex items-center bg-slate-100/70 border border-slate-200 rounded-xl px-4 overflow-hidden opacity-70">
-                                  <span className="text-sm text-slate-400 py-2.5 border-r border-slate-200 pr-3 mr-3">
-                                    jekoesim.com/p/
-                                  </span>
-                                  <input
-                                    type="text"
-                                    disabled
-                                    value={partnerStoreInfo.domain}
-                                    className="w-full py-2.5 bg-transparent border-none text-sm font-bold text-slate-600 focus:ring-0 px-0 cursor-not-allowed"
-                                  />
+                                <div className="flex items-center bg-[#f1f2f4] border border-[#e1e3e5] rounded-lg px-3 py-2.5 text-sm text-[#6d7175]">
+                                  www.jeko-esim.com.tw/p/{partnerStoreInfo.domain}
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1.5">
-                                  為確保客人的連結不失效，網址綁定後如需修改請聯繫官方客服。
-                                </p>
                               </div>
-
-                              <div className="pt-4">
-                                <button
-                                  onClick={handleUpdateStoreSettings}
-                                  disabled={
-                                    savingStore ||
-                                    editStoreName ===
-                                      partnerStoreInfo.store_name
-                                  }
-                                  className="w-full sm:w-auto px-8 py-3 bg-sky-600 text-white font-bold rounded-xl hover:bg-sky-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                >
-                                  {savingStore ? "儲存中..." : "儲存設定"}
-                                </button>
-                              </div>
-                            </div>
+                              <button
+                                type="button"
+                                onClick={handleUpdateStoreSettings}
+                                disabled={
+                                  savingStore ||
+                                  editStoreName === partnerStoreInfo.store_name
+                                }
+                                className="px-5 py-2.5 bg-[#008060] text-white text-sm font-semibold rounded-lg disabled:opacity-50"
+                              >
+                                {savingStore ? "儲存中…" : "儲存設定"}
+                              </button>
+                            </>
                           ) : (
-                            <div className="bg-amber-50 text-amber-700 p-4 rounded-xl text-sm font-bold border border-amber-200">
-                              總部審核中，或尚未為您開通專屬網址，請聯繫管理員。
-                            </div>
+                            <p className="text-sm text-[#b98900] bg-[#fff5ea] p-4 rounded-lg">
+                              總部審核中，或尚未開通專屬網址。
+                            </p>
                           )}
                         </div>
                       )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+            </NavyPanel>
+          </motion.div>
+        )}
 
-              {/* === 我的 eSIM (略) === */}
-              {activeTab === "orders" && (
-                <motion.div
-                  key="orders"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  <h2 className="text-2xl font-black text-slate-800">
-                    我的 eSIM 與訂單
-                  </h2>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </main>
-        </div>
-      </div>
+        {activeTab === "orders" && (
+          <motion.div
+            key="orders"
+            className="w-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+          >
+            <AccountOrdersView
+              orders={orders}
+              loading={ordersLoading}
+              onRefresh={() => user?.email && loadOrders(user.email)}
+              getAuthHeaders={getAuthHeaders}
+              onTabChange={setActiveTab}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "traffic" && (
+          <motion.div
+            key="traffic"
+            className="w-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+          >
+            <AccountTrafficView orders={orders} ordersLoading={ordersLoading} />
+          </motion.div>
+        )}
+
+        {activeTab === "settings" && (
+          <motion.div key="settings" className="w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <AccountSettingsView
+              user={user}
+              userRole={userRole}
+              editingName={editingName}
+              setEditingName={setEditingName}
+              editingPhone={editingPhone}
+              setEditingPhone={setEditingPhone}
+              newPassword={newPassword}
+              setNewPassword={setNewPassword}
+              savingProfile={savingProfile}
+              savingPassword={savingPassword}
+              onProfileUpdate={handleProfileUpdate}
+              onPasswordUpdate={handlePasswordUpdate}
+              supabaseUser={supabaseUser}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "support" && (
+          <motion.div key="support" className="w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <AccountSupportView
+              user={user}
+              orders={orders}
+              onGuideClick={handleGuideClick}
+              onTabChange={setActiveTab}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </AccountShell>
     </Layout>
   );
 }

@@ -1370,7 +1370,7 @@ export default function RegisterDistributor() {
                     ，您的賣場網址就是：
                   </p>
                   <p className="text-[13px] font-mono font-bold text-[#1a56db] break-all">
-                    jeko-esim.com.tw/p/tokyo-travel
+                    www.jeko-esim.com.tw/p/tokyo-travel
                   </p>
                   <p className="text-[11px] text-slate-400 mt-2">
                     可貼在 LINE 群組、IG 限動、名片或官網，讓旅客直接向您購買 eSIM。
@@ -1415,7 +1415,7 @@ export default function RegisterDistributor() {
                     您的賣場預覽網址
                   </p>
                   <p className="text-sm font-mono font-bold text-[#1a56db]">
-                    jeko-esim.com.tw/p/{form.slug}
+                    www.jeko-esim.com.tw/p/{form.slug}
                   </p>
                 </div>
               )}

@@ -55,7 +55,7 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY 
     );
 
-    const { data, error } = await supabaseAdmin
+    const { data: orders, error } = await supabaseAdmin
       .from("orders")
       .select("*")
       .eq("customer_email", targetEmail)
@@ -63,7 +63,31 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    return res.status(200).json({ success: true, data });
+    const orderList = orders || [];
+    const orderIds = orderList.map((o) => o.id).filter(Boolean);
+
+    let refundsByOrder = {};
+    if (orderIds.length) {
+      const { data: refunds, error: refundErr } = await supabaseAdmin
+        .from("refund_requests")
+        .select("id, order_id, status, request_type, reason_type, reason_note, admin_note, created_at, reviewed_at")
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: false });
+
+      if (refundErr) throw refundErr;
+
+      for (const r of refunds || []) {
+        if (!refundsByOrder[r.order_id]) refundsByOrder[r.order_id] = [];
+        refundsByOrder[r.order_id].push(r);
+      }
+    }
+
+    const normalized = orderList.map((order) => ({
+      ...order,
+      refund_requests: refundsByOrder[order.id] || [],
+    }));
+
+    return res.status(200).json({ success: true, data: normalized });
 
   } catch (error) {
     console.error("[Get Orders Error]:", error);

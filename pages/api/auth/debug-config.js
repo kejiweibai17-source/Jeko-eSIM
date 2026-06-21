@@ -4,6 +4,7 @@
  * Vercel → Deployments → Functions → Logs 也可看到 [Auth Debug] 輸出
  */
 import { authLog } from "../../../lib/authDebug";
+import { PRODUCTION_SITE_URL, PRODUCTION_SITE_HOST } from "../../../lib/siteUrl";
 
 export default function handler(req, res) {
   if (req.method !== "GET") {
@@ -33,14 +34,15 @@ export default function handler(req, res) {
     hasSupabaseServiceRole: hasServiceRole,
     checks: {
       nextAuthUrlOk:
-        nextAuthUrl.startsWith("https://jeko-e-sim.vercel.app") ||
+        nextAuthUrl.startsWith(PRODUCTION_SITE_URL) ||
+        nextAuthUrl.startsWith(`https://${PRODUCTION_SITE_HOST}`) ||
         nextAuthUrl.startsWith("http://localhost:3000"),
       lineKeysOk: !!lineId && hasLineSecret,
       supabaseOk:
         supabaseUrl.includes("supabase.co") && hasServiceRole && hasNextAuthSecret,
     },
-    hint:
-      "LINE Developers 必須登記 expectedLineCallback；正式站 NEXTAUTH_URL=https://jeko-e-sim.vercel.app",
+    productionSiteUrl: PRODUCTION_SITE_URL,
+    hint: `LINE Developers 必須登記 expectedLineCallback；正式站 NEXTAUTH_URL=${PRODUCTION_SITE_URL}`,
   };
 
   authLog("debug-config 被呼叫", report);

@@ -9,6 +9,7 @@ import Step from "@mui/material/Step";
 import StepLabel from "@mui/material/StepLabel";
 import Box from "@mui/material/Box";
 import PartnerLayout from "@/components/PartnerLayout"; // 🌟 引入統一版型
+import EsimRefundDisclosure from "@/components/legal/EsimRefundDisclosure";
 import { TrashIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
 
 const TruckIcon = () => (
@@ -376,14 +377,23 @@ export default function PartnerCart({ store }) {
                         NT$ {cartTotal}
                       </span>
                     </div>
-                    <label className="flex items-start gap-3 mb-6 cursor-pointer">
+                    <EsimRefundDisclosure compact />
+                    <label className="flex items-start gap-3 mb-6 cursor-pointer mt-4">
                       <input
                         type="checkbox"
                         required
                         className="mt-1 w-4 h-4 text-blue-600 rounded"
                       />
                       <span className="text-xs text-gray-500 font-medium">
-                        我同意本店服務條款與退換貨政策，並確認 Email 無誤。
+                        我同意{" "}
+                        <Link href="/terms" target="_blank" className="text-blue-600 hover:underline">
+                          服務條款
+                        </Link>
+                        、
+                        <Link href="/refund-policy" target="_blank" className="text-blue-600 hover:underline">
+                          退換貨政策
+                        </Link>
+                        ，並確認 Email 無誤；eSIM 掃描開通後即無法退款（除政策例外）。
                       </span>
                     </label>
                     <button

@@ -8,6 +8,7 @@ import { useState } from "react";
 import Stepper from "@mui/material/Stepper";
 import Step from "@mui/material/Step";
 import CheckoutForm from "../components/CheckoutForm";
+import EsimRefundDisclosure from "../components/legal/EsimRefundDisclosure";
 import StepLabel from "@mui/material/StepLabel";
 import Box from "@mui/material/Box";
 import { motion, AnimatePresence } from "framer-motion";
@@ -358,6 +359,10 @@ const CartPage = () => {
                           </button>
                         </div>
 
+                        <div className="mb-4">
+                          <EsimRefundDisclosure compact />
+                        </div>
+
                         {/* 同意條款 Checkbox */}
                         <label className="flex items-start gap-2 mb-6 cursor-pointer group">
                           <input
@@ -366,21 +371,15 @@ const CartPage = () => {
                             required
                           />
                           <span className="text-xs text-gray-600 leading-tight">
-                            By clicking "Submit Payment", you agree to the{" "}
-                            <a
-                              href="#"
-                              className="text-blue-600 hover:underline"
-                            >
-                              Terms of Service
-                            </a>{" "}
-                            and you acknowledge receipt of our{" "}
-                            <a
-                              href="#"
-                              className="text-blue-600 hover:underline"
-                            >
-                              Privacy Notice
-                            </a>
-                            .
+                            我同意{" "}
+                            <Link href="/terms" className="text-blue-600 hover:underline" target="_blank">
+                              服務條款
+                            </Link>
+                            、
+                            <Link href="/refund-policy" className="text-blue-600 hover:underline" target="_blank">
+                              退換貨政策
+                            </Link>
+                            ，並確認 eSIM 為數位商品，掃描開通後即無法退款（除政策例外）。
                           </span>
                         </label>
 

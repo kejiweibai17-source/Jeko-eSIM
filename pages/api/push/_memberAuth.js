@@ -30,7 +30,12 @@ export async function resolveMemberEmail(req, res) {
       (session.user.id
         ? `${session.user.id}@line-login.com`
         : `${session.user.name || "line"}@line.jekoesim.com`);
-    return { email: email.toLowerCase(), userId: session.user.id || null, source: "line" };
+    return {
+      email: email.toLowerCase(),
+      userId: session.user.id || null,
+      source: "line",
+      lineUserId: session.user.id || null,
+    };
   }
 
   return null;

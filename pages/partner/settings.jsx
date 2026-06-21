@@ -117,7 +117,7 @@ export default function PartnerSettingsPage() {
               專屬網址 — <span className="text-red-400 normal-case">不可修改</span>
             </label>
             <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 opacity-70">
-              <span className="text-sm text-slate-400 mr-2 font-mono">jeko-esim.com.tw/p/</span>
+              <span className="text-sm text-slate-400 mr-2 font-mono">www.jeko-esim.com.tw/p/</span>
               <span className="text-sm font-bold text-slate-600 font-mono">{store?.domain}</span>
             </div>
           </div>

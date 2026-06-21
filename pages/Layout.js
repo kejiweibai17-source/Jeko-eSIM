@@ -13,7 +13,7 @@ import SmartWizardFloat from "@/components/SmartWizardFloat"; // 引入新元件
 import Sidebar from "@/components/Sidebar.js"; // 引入側邊欄組件
 import { UserProvider } from "../components/context/UserContext";
 import AiChatWidget from "../components/AiChatWidget"; // 🌟 引入剛剛做的元件
-export default function RootLayout({ children, seo: seoOverride = {} }) {
+export default function RootLayout({ children, seo: seoOverride = {}, hideNavbar = false }) {
   const router = useRouter();
   const seo = useMemo(
     () => resolvePageSeo(router.pathname, router.asPath, seoOverride),
@@ -58,7 +58,7 @@ export default function RootLayout({ children, seo: seoOverride = {} }) {
           <NextThemesProvider attribute="class" defaultTheme="light">
             <UserProvider>
               {/* ✅ 提早包住所有元件 */}
-              <Navbar />
+              {!hideNavbar && <Navbar />}
               <Sidebar sidebarProduct={sidebarProduct} onAddToCart={handleAddToCart} />
               
               {children}

@@ -9,6 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useCart } from "@/components/context/CartContext";
 import PartnerLayout from "@/components/PartnerLayout";
+import EsimRefundDisclosure from "@/components/legal/EsimRefundDisclosure";
 
 export default function PartnerProductDetail({
   store,
@@ -361,6 +362,10 @@ export default function PartnerProductDetail({
                     {Math.round(finalData.discountAmount)}
                   </p>
                 )}
+              </div>
+
+              <div className="px-6 pb-2">
+                <EsimRefundDisclosure compact />
               </div>
 
               {/* 🌟 數量與加入購物車 (底部固定區塊) */}

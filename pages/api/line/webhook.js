@@ -12,6 +12,26 @@ import {
   getLineMessagingConfig,
   isLineBotConfigured,
 } from "../../../lib/lineBot";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } },
+);
+
+const ALERT_KEYWORDS = [
+  "開啟流量提醒",
+  "流量提醒",
+  "綁定推播",
+  "推播提醒",
+  "低流量提醒",
+];
+
+function isAlertKeyword(text) {
+  const t = String(text || "").trim();
+  return ALERT_KEYWORDS.some((kw) => t.includes(kw));
+}
 
 export const config = {
   api: { bodyParser: false },
@@ -25,12 +45,104 @@ async function readRawBody(req) {
   return Buffer.concat(chunks);
 }
 
+async function upsertLineFriend(lineUserId, displayName) {
+  await supabaseAdmin.from("line_oa_friends").upsert(
+    {
+      line_user_id: lineUserId,
+      display_name: displayName || null,
+      followed_at: new Date().toISOString(),
+      unfollowed_at: null,
+    },
+    { onConflict: "line_user_id" },
+  );
+}
+
+async function markLineUnfollow(lineUserId) {
+  await supabaseAdmin
+    .from("line_oa_friends")
+    .update({ unfollowed_at: new Date().toISOString() })
+    .eq("line_user_id", lineUserId);
+}
+
+async function enableLineTrafficAlert(lineUserId) {
+  const esims = await fetchEsimsByLineUserId(lineUserId);
+  const target = esims[0];
+  if (!target?.topupId) {
+    return {
+      ok: false,
+      message:
+        "找不到本站 eSIM 訂單。請先用同一 LINE 登入本站購買，或至會員中心綁定。",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin.from("line_traffic_alerts").upsert(
+    {
+      line_user_id: lineUserId,
+      topup_id: target.topupId,
+      iccid: target.iccid || null,
+      product_label: target.productName,
+      order_id: target.orderId || null,
+      guest_email: `${lineUserId}@line-login.com`,
+      monitor_enabled: true,
+      updated_at: now,
+    },
+    { onConflict: "line_user_id,topup_id" },
+  );
+
+  if (error) {
+    const { error: insertErr } = await supabaseAdmin
+      .from("line_traffic_alerts")
+      .insert({
+        line_user_id: lineUserId,
+        topup_id: target.topupId,
+        iccid: target.iccid || null,
+        product_label: target.productName,
+        order_id: target.orderId || null,
+        guest_email: `${lineUserId}@line-login.com`,
+        monitor_enabled: true,
+        updated_at: now,
+      });
+    if (insertErr) {
+      return { ok: false, message: "設定失敗，請稍後再試或至網站會員中心操作。" };
+    }
+  }
+
+  return {
+    ok: true,
+    message: [
+      "✅ 已開啟 LINE 流量偏低提醒",
+      "",
+      `監控方案：${target.productName}`,
+      "剩餘流量偏低時，我們會主動推播通知您。",
+      "",
+      "💡 也可隨時傳「查詢用量」查最新流量。",
+    ].join("\n"),
+  };
+}
+
 async function handleTextMessage(event) {
   const text = event.message?.text || "";
   const replyToken = event.replyToken;
   const lineUserId = event.source?.userId;
 
   const iccid = extractIccidFromText(text);
+
+  if (isAlertKeyword(text)) {
+    if (!lineUserId) {
+      await replyLineMessage(replyToken, {
+        type: "text",
+        text: "無法識別 LINE 帳號，請稍後再試。",
+      });
+      return;
+    }
+    const result = await enableLineTrafficAlert(lineUserId);
+    await replyLineMessage(replyToken, {
+      type: "text",
+      text: result.message,
+    });
+    return;
+  }
 
   if (iccid) {
     const result = await queryEsimUsage({ iccid });
@@ -123,6 +235,32 @@ export default async function handler(req, res) {
 
   try {
     for (const event of events) {
+      if (event.type === "follow" && event.source?.userId) {
+        await upsertLineFriend(
+          event.source.userId,
+          event.source?.displayName,
+        );
+        if (event.replyToken) {
+          await replyLineMessage(event.replyToken, {
+            type: "text",
+            text: [
+              "👋 歡迎加入 Jeko eSIM！",
+              "",
+              "您可以：",
+              "• 傳「查詢用量」查最近 eSIM 流量",
+              "• 傳「開啟流量提醒」綁定低流量推播",
+              "• 直接貼上 ICCID 查詢",
+            ].join("\n"),
+          });
+        }
+        continue;
+      }
+
+      if (event.type === "unfollow" && event.source?.userId) {
+        await markLineUnfollow(event.source.userId);
+        continue;
+      }
+
       if (event.type === "message" && event.message?.type === "text") {
         await handleTextMessage(event);
       }

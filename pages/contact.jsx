@@ -1,19 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import axios from "axios";
-import Layout from "./Layout.js";
-import Image from "next/image";
-import AccordionItem from "../components/AccordionItem";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import Layout from "./Layout";
+import ContactPageShell from "@/components/contact/ContactPageShell";
+import GeneralInquiryTab from "@/components/contact/GeneralInquiryTab";
+import PartnerApplicationTab from "@/components/contact/PartnerApplicationTab";
+import RefundContactTab from "@/components/contact/RefundContactTab";
+
+const TAB_MAP = {
+  general: GeneralInquiryTab,
+  partner: PartnerApplicationTab,
+  refund: RefundContactTab,
+};
+
+const VALID_TABS = Object.keys(TAB_MAP);
 
 export default function ContactPage() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("general");
+
+  useEffect(() => {
+    const q = router.query.tab;
+    if (typeof q === "string" && VALID_TABS.includes(q)) {
+      setActiveTab(q);
+    }
+  }, [router.query.tab]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    router.replace({ pathname: "/contact", query: tab === "general" ? {} : { tab } }, undefined, {
+      shallow: true,
+    });
+  };
+
+  const TabContent = TAB_MAP[activeTab] || GeneralInquiryTab;
+
   return (
-    <Layout>
-      <div className=" bg-[#f0f1f2] flex-col flex justify-center items-center py-[200px] ">
-        <section className="contact-form   max-w-[1920px] flex flex-col md:flex-row mx-auto w-[80%]">
-          <a href="">待建置.....</a>
-        </section>
-      </div>
+    <Layout
+      seo={{
+        title: "聯絡我們｜Jeko eSIM 客服、合作夥伴與退換款",
+        description:
+          "聯絡 Jeko eSIM：一般客服諮詢、合作夥伴申請、退換款售後聯繫。1～3 個工作天內回覆。",
+      }}
+    >
+      <ContactPageShell activeTab={activeTab} onTabChange={handleTabChange}>
+        <TabContent />
+      </ContactPageShell>
     </Layout>
   );
 }

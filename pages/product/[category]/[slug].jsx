@@ -20,6 +20,7 @@ import {
 } from "../../../lib/resolveMedusaImageUrl";
 import { useUser } from "../../../components/context/UserContext";
 import MaterialIcon from "../../../components/MaterialIcon";
+import EsimRefundDisclosure from "../../../components/legal/EsimRefundDisclosure";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
@@ -644,7 +645,8 @@ function ServiceBenefits() {
     {
       icon: "assignment_return",
       title: "安心購買",
-      desc: "依方案政策提供售後支援",
+      desc: "未開通可退款；開通後依退換貨政策",
+      href: "/refund-policy",
     },
     {
       icon: "verified_user",
@@ -681,11 +683,20 @@ function ServiceBenefits() {
               <MaterialIcon name={item.icon} size={22} />
             </span>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900">{item.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+              {item.href ? (
+                <a href={item.href} target="_blank" rel="noopener noreferrer" className="block group">
+                  <p className="font-semibold text-slate-900 group-hover:text-[#00befa]">{item.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                </a>
+              ) : (
+                <>
+                  <p className="font-semibold text-slate-900">{item.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                </>
+              )}
             </div>
             <MaterialIcon
-              name="info"
+              name={item.href ? "open_in_new" : "info"}
               size={16}
               className="text-gray-300 shrink-0"
             />
@@ -3068,6 +3079,10 @@ export default function ProductPage({
                 >
                   立即購買
                 </button>
+              </div>
+
+              <div className="mt-4">
+                <EsimRefundDisclosure compact />
               </div>
 
               <button

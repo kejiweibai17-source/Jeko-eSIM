@@ -5,6 +5,7 @@ import Image from "next/image";
 import PushButton from "./PushButton";
 import PushIccidBind from "./PushIccidBind";
 import PushMemberEsimBind from "./PushMemberEsimBind";
+import PushLineAlertSection from "./PushLineAlertSection";
 import GuestPushBindForm from "./GuestPushBindForm";
 import IosPwaPushGuide from "./IosPwaPushGuide";
 import MaterialIcon from "./MaterialIcon";
@@ -339,7 +340,7 @@ export default function PushNotificationSection({
 
   const noOrderModal = noOrderPrompt ? (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
+      className="fixed inset-0 z-[11050] flex items-center justify-center p-4 bg-black/50"
       role="dialog"
       aria-modal="true"
       aria-labelledby="member-no-order-title"
@@ -500,6 +501,12 @@ export default function PushNotificationSection({
                 )}
               </div>
             )}
+
+            {bindPhase === "bound" && (
+              <div className="bg-white px-5 sm:px-8 py-5 border-t border-stone-100">
+                <PushLineAlertSection boundTopupId={boundInfo?.topupId} />
+              </div>
+            )}
           </div>
 
           {autoBinding && (
@@ -510,7 +517,7 @@ export default function PushNotificationSection({
           )}
 
           {!formIntegrated && (bindPanel || showMemberBindHint) && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
               {bindPanel}
               {showMemberBindHint && !bindPanel && (
                 <p className="text-xs text-stone-500 px-1 leading-relaxed">
@@ -518,6 +525,7 @@ export default function PushNotificationSection({
                   ICCID 綁定。
                 </p>
               )}
+              <PushLineAlertSection boundTopupId={boundInfo?.topupId} />
             </div>
           )}
         </div>
@@ -582,6 +590,9 @@ export default function PushNotificationSection({
             )}
 
             {bindPanel}
+            {(bindPhase === "bound" || bindPhase === "unbound") && (
+              <PushLineAlertSection boundTopupId={boundInfo?.topupId} />
+            )}
           </>
         )}
       </div>
