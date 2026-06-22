@@ -10,7 +10,7 @@ import MaterialIcon from "@/components/MaterialIcon";
 import { useUser } from "@/components/context/UserContext";
 import { detectPushSupport } from "@/lib/pushSupport";
 import { buildLoginUrl } from "@/lib/authRedirect";
-import { buildInstallHintText } from "@/lib/deviceDetect";
+import { buildInstallHintText, isChromiumBrowser } from "@/lib/deviceDetect";
 import { usePWAInstall } from "./usePWAInstall";
 import HeroCountryPlanPicker from "./HeroCountryPlanPicker";
 
@@ -142,6 +142,7 @@ const slides = [
     image: "/images/Hero-banner-01.png",
     imageMobile: "/images/hero-banner-mobile.png",
   },
+  { image: "/images/eac1444f-59c2-46b3-96b9-f675b0223a62.png" },
   { image: "/images/location/fcc7e825-9136-4c9d-8312-3309fe189b4c.png" },
   { image: "/images/location/korea-02.png" },
   { image: "/images/location/thailand-01.png" },
@@ -238,9 +239,13 @@ export default function Slider() {
       openInstallGuide("push");
       return;
     }
-    alert(
-      "請點擊 Chrome 網址列右側的「安裝」圖示（電腦＋下載箭頭）。\n若尚未出現，請重新整理頁面或稍等幾秒後再試。",
-    );
+    if (isChromiumBrowser()) {
+      alert(
+        "請點 Chrome 網址列右側的「安裝」圖示（電腦＋箭頭）。\n\n若尚未出現：\n1. 右上角 ⋮ 選單 →「安裝 Jeko eSIM…」\n2. 或重新整理後停留 30 秒再試\n3. 不要用無痕視窗",
+      );
+      return;
+    }
+    alert("請先安裝 Jeko APP，再開啟推播或流量提醒。");
   };
 
   const scrollToSection = (hash) => {

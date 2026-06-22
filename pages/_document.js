@@ -15,6 +15,19 @@ export default function Document() {
       <body>
         <Main />
         <NextScript />
+        {process.env.NODE_ENV === "production" && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+                  });
+                }
+              `,
+            }}
+          />
+        )}
       </body>
     </Html>
   );

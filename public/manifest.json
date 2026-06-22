@@ -8,24 +8,25 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#147AD7",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/images/Logo/jeko-logo.jpg",
+      "src": "/images/Logo/icon-192.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/images/Logo/jeko-logo.jpg",
+      "src": "/images/Logo/icon-512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/images/Logo/jeko-logo.jpg",
+      "src": "/images/Logo/icon-512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]

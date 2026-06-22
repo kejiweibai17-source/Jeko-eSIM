@@ -7,6 +7,7 @@ import {
   subscribeInstallPrompt,
   promptInstall,
 } from "@/lib/pwaInstallPrompt";
+import { isSafariBrowser } from "@/lib/deviceDetect";
 
 export function usePWAInstall() {
   const [isInstallable, setIsInstallable] = useState(false);
@@ -17,7 +18,10 @@ export function usePWAInstall() {
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIos = /iphone|ipad|ipod/.test(userAgent);
     const isIpadOS = userAgent.includes("mac") && "ontouchend" in document;
-    const isMac = userAgent.includes("mac") && !("ontouchend" in document);
+    const isMacSafari =
+      userAgent.includes("mac") &&
+      !("ontouchend" in document) &&
+      isSafariBrowser();
 
     const standaloneCheck =
       window.navigator.standalone === true ||
@@ -28,7 +32,7 @@ export function usePWAInstall() {
     if (!standaloneCheck) {
       if (isIos || isIpadOS) {
         setDeviceType("ios");
-      } else if (isMac) {
+      } else if (isMacSafari) {
         setDeviceType("mac");
       }
     }
