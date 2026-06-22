@@ -1,8 +1,10 @@
 {
+  "id": "/",
   "name": "Jeko eSIM 波波旅遊網卡",
   "short_name": "Jeko eSIM",
   "description": "出國上網免換卡，購買後即刻掃描安裝，離線也能查看憑證！",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#147AD7",
@@ -18,7 +20,13 @@
       "src": "/images/Logo/jeko-logo.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "maskable any"
+      "purpose": "any"
+    },
+    {
+      "src": "/images/Logo/jeko-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable"
     }
   ]
 }

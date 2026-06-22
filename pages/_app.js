@@ -9,6 +9,7 @@ import { CartProvider } from "../components/context/CartContext";
 import { UserProvider } from "../components/context/UserContext"; 
 import { PWA_LOGO, SITE_FAVICON } from "../lib/pwaConfig";
 import PartnerRecoveryRedirect from "../components/PartnerRecoveryRedirect";
+import PWARegister from "../components/PWARegister";
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   return (
@@ -19,6 +20,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
         <link rel="icon" href={SITE_FAVICON} />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href={PWA_LOGO} />
+        <meta name="mobile-web-app-capable" content="yes" />
       </Head>
 
       {/* 🌟 用 SessionProvider 包覆全站，讓所有組件都能抓到 LINE 登入狀態 */}
@@ -27,6 +29,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
           <AuthProvider>
             <NextUIProvider>
               <CartProvider>
+                <PWARegister />
                 <PartnerRecoveryRedirect />
                 <Component {...pageProps} />
               </CartProvider>

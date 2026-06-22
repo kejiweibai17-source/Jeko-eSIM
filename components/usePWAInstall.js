@@ -2,9 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { subscribeToPush as subscribeToPushApi } from "@/lib/pushSubscribe";
+import {
+  getDeferredInstallPrompt,
+  subscribeInstallPrompt,
+  promptInstall,
+} from "@/lib/pwaInstallPrompt";
 
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [deviceType, setDeviceType] = useState("none");
   const [isStandalone, setIsStandalone] = useState(false);
@@ -29,33 +33,30 @@ export function usePWAInstall() {
       }
     }
 
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-      setDeviceType("none");
+    const syncInstallable = (prompt) => {
+      setIsInstallable(!!prompt);
+      if (prompt) setDeviceType("none");
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    syncInstallable(getDeferredInstallPrompt());
+    const unsubscribe = subscribeInstallPrompt(syncInstallable);
 
-    window.addEventListener("appinstalled", () => {
-      setDeferredPrompt(null);
+    const onInstalled = () => {
       setIsInstallable(false);
       setDeviceType("none");
       setIsStandalone(true);
-    });
+    };
+
+    window.addEventListener("appinstalled", onInstalled);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      unsubscribe();
+      window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
 
   const installPWA = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    setIsInstallable(false);
+    await promptInstall();
   };
 
   const subscribeToPush = async ({ token, onStep } = {}) => {

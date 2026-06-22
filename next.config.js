@@ -9,7 +9,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   reloadOnOnline: true,
   swcMinify: true,
   disable: process.env.NODE_ENV === "development",
-  register: false, // 由 PushButton 統一 register，避免與 next-pwa 雙重註冊競爭
+  register: false, // 由 PWARegister 元件在 _app 統一 register，與推播共用 /sw.js
   cacheStartUrl: false,
 
   fallbacks: {

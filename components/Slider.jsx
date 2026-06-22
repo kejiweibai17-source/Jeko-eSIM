@@ -236,7 +236,11 @@ export default function Slider() {
     }
     if (needsAppleInstall) {
       openInstallGuide("push");
+      return;
     }
+    alert(
+      "請點擊 Chrome 網址列右側的「安裝」圖示（電腦＋下載箭頭）。\n若尚未出現，請重新整理頁面或稍等幾秒後再試。",
+    );
   };
 
   const scrollToSection = (hash) => {
