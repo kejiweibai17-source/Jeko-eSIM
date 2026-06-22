@@ -232,7 +232,9 @@ export default function Slider() {
 
   const handleInstallApp = () => {
     if (isInstallable) {
-      installPWA();
+      alert(
+        "Chrome 網址列右側應已出現「安裝」圖示（電腦＋箭頭），請點它安裝。\n\n若沒看到，請點右上角 ⋮ →「安裝 Jeko eSIM…」",
+      );
       return;
     }
     if (needsAppleInstall) {
@@ -241,7 +243,7 @@ export default function Slider() {
     }
     if (isChromiumBrowser()) {
       alert(
-        "請點 Chrome 網址列右側的「安裝」圖示（電腦＋箭頭）。\n\n若尚未出現：\n1. 右上角 ⋮ 選單 →「安裝 Jeko eSIM…」\n2. 或重新整理後停留 30 秒再試\n3. 不要用無痕視窗",
+        "Chrome 安裝圖示尚未出現，請試試：\n\n1. 回到首頁 jeko-esim.com.tw 停留 30 秒\n2. 點一下頁面任意位置\n3. 重新整理（Cmd+Shift+R）\n4. 右上角 ⋮ 選單找「安裝 Jeko eSIM…」\n5. chrome://settings/content/all → 搜 jeko → 清除資料後重試\n\n※ 不要用無痕視窗",
       );
       return;
     }

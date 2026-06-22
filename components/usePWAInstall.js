@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { subscribeToPush as subscribeToPushApi } from "@/lib/pushSubscribe";
 import {
-  getDeferredInstallPrompt,
   subscribeInstallPrompt,
-  promptInstall,
+  isPwaInstallAvailable,
 } from "@/lib/pwaInstallPrompt";
 import { isSafariBrowser } from "@/lib/deviceDetect";
 
@@ -37,12 +36,12 @@ export function usePWAInstall() {
       }
     }
 
-    const syncInstallable = (prompt) => {
-      setIsInstallable(!!prompt);
-      if (prompt) setDeviceType("none");
+    const syncInstallable = (available) => {
+      setIsInstallable(!!available);
+      if (available) setDeviceType("none");
     };
 
-    syncInstallable(getDeferredInstallPrompt());
+    syncInstallable(isPwaInstallAvailable());
     const unsubscribe = subscribeInstallPrompt(syncInstallable);
 
     const onInstalled = () => {
@@ -60,7 +59,7 @@ export function usePWAInstall() {
   }, []);
 
   const installPWA = async () => {
-    await promptInstall();
+    // 安裝由 Chrome 網址列圖示處理，此函式僅供 UI 提示
   };
 
   const subscribeToPush = async ({ token, onStep } = {}) => {

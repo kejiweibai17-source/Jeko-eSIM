@@ -19,11 +19,17 @@ export default function Document() {
           <script
             dangerouslySetInnerHTML={{
               __html: `
-                if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', function () {
-                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+                (function () {
+                  if ('serviceWorker' in navigator) {
+                    window.addEventListener('load', function () {
+                      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+                    });
+                  }
+                  window.addEventListener('beforeinstallprompt', function () {
+                    window.__pwaInstallAvailable = true;
+                    window.dispatchEvent(new Event('pwa-install-available'));
                   });
-                }
+                })();
               `,
             }}
           />
