@@ -13,6 +13,7 @@ export default function MobileCardCarousel({
   children,
   slideClassName = "min-w-0 flex-[0_0_85%]",
   gap = 16,
+  slidesToScroll = 1,
   showArrows = true,
   showDots = true,
   autoplay = true,
@@ -33,6 +34,7 @@ export default function MobileCardCarousel({
       align: "start",
       containScroll: loop ? false : "trimSnaps",
       dragFree: false,
+      slidesToScroll,
     },
     plugins
   );
@@ -69,8 +71,9 @@ export default function MobileCardCarousel({
 
   if (slides.length === 0) return null;
 
-  const dotCount = loop ? slides.length : scrollSnaps.length;
-  const activeDot = loop ? selectedIndex % slides.length : selectedIndex;
+  const dotCount = scrollSnaps.length > 0 ? scrollSnaps.length : slides.length;
+  const activeDot =
+    dotCount > 0 ? ((selectedIndex % dotCount) + dotCount) % dotCount : 0;
 
   return (
     <div className={className}>

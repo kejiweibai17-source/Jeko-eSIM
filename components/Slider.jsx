@@ -137,12 +137,15 @@ function HeroQuickTile({ label, icon, href, external, onClick }) {
   );
 }
 
+const HEADLINE_FROM_INDEX = 2;
+
 const slides = [
   {
     image: "/images/Hero-banner-01.png",
     imageMobile: "/images/hero-banner-mobile.png",
   },
-  { image: "/images/eac1444f-59c2-46b3-96b9-f675b0223a62.png" },
+  { image: "/images/優惠banner04.png" },
+
   { image: "/images/location/fcc7e825-9136-4c9d-8312-3309fe189b4c.png" },
   { image: "/images/location/korea-02.png" },
   { image: "/images/location/thailand-01.png" },
@@ -264,8 +267,6 @@ export default function Slider() {
 
       const slideDuration = 4;
       const transitionDuration = 1.5;
-      const scaleDuration = 12;
-      const scaleStart = 1.08;
 
       function animateSlide(nextIndex) {
         if (isAnimating || nextIndex === currentIndex) return;
@@ -292,47 +293,39 @@ export default function Slider() {
           0,
         );
 
-        gsap.set(nextImg, { scale: scaleStart, opacity: 0 });
+        gsap.set(nextImg, { scale: 1, opacity: 0 });
         tl.to(
           nextImg,
           { opacity: 1, duration: transitionDuration, ease: "power2.inOut" },
           0,
         );
 
-        gsap.to(nextImg, { scale: 1, duration: scaleDuration, ease: "none" });
-
         if (titleRef.current) {
-          const currentTitle = titleRef.current.querySelector(
-            `div[data-index="${currentIndex}"]`,
-          );
-          const nextTitle = titleRef.current.querySelector(
-            `div[data-index="${nextIndex}"]`,
-          );
+          const showCurrent = currentIndex >= HEADLINE_FROM_INDEX;
+          const showNext = nextIndex >= HEADLINE_FROM_INDEX;
 
-          const allTitleDivs =
-            titleRef.current.querySelectorAll(".title-group");
-          gsap.set(allTitleDivs, { zIndex: 1 });
-          gsap.set(nextTitle, { zIndex: 2 });
-
-          tl.to(
-            currentTitle,
-            {
-              autoAlpha: 0,
-              duration: transitionDuration,
-              ease: "power2.inOut",
-            },
-            0,
-          );
-          gsap.set(nextTitle, { autoAlpha: 0 });
-          tl.to(
-            nextTitle,
-            {
-              autoAlpha: 1,
-              duration: transitionDuration,
-              ease: "power2.inOut",
-            },
-            0,
-          );
+          if (showCurrent && !showNext) {
+            tl.to(
+              titleRef.current,
+              {
+                autoAlpha: 0,
+                duration: transitionDuration,
+                ease: "power2.inOut",
+              },
+              0,
+            );
+          } else if (!showCurrent && showNext) {
+            gsap.set(titleRef.current, { autoAlpha: 0 });
+            tl.to(
+              titleRef.current,
+              {
+                autoAlpha: 1,
+                duration: transitionDuration,
+                ease: "power2.inOut",
+              },
+              0,
+            );
+          }
         }
 
         indicatorsRef.current.forEach((ind, i) => {
@@ -361,13 +354,8 @@ export default function Slider() {
       gsap.set(imagesRef.current, { opacity: 0 });
       gsap.set(imagesRef.current[0], {
         opacity: 1,
-        scale: scaleStart,
-        zIndex: 2,
-      });
-      gsap.to(imagesRef.current[0], {
         scale: 1,
-        duration: scaleDuration,
-        ease: "none",
+        zIndex: 2,
       });
 
       indicatorsRef.current.forEach((ind, i) => {
@@ -382,9 +370,9 @@ export default function Slider() {
       });
 
       if (titleRef.current) {
-        const allTitleDivs = titleRef.current.querySelectorAll(".title-group");
-        gsap.set(allTitleDivs, { autoAlpha: 0 });
-        gsap.set(allTitleDivs[0], { autoAlpha: 1, zIndex: 2 });
+        gsap.set(titleRef.current, {
+          autoAlpha: HEADLINE_FROM_INDEX === 0 ? 1 : 0,
+        });
       }
 
       startAutoplay();
@@ -411,13 +399,13 @@ export default function Slider() {
         .hero-wrap { position: relative; width: 100%; z-index: 30; isolation: isolate; background: #fff; }
         .hero-container { position: relative; width: 100%; height: 90vh; height: 90svh; min-height: 480px; overflow: hidden; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #fff; z-index: 0; }
         .images-wrapper { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
-        .slide-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; will-change: transform, opacity; z-index: 0; }
-        .slide-image img { width: 100%; height: 100%; object-fit: cover; }
+        .slide-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; will-change: transform, opacity; z-index: 0; overflow: hidden; }
+        .slide-image img { width: 100%; height: 100%; object-fit: cover; object-position: center 55%; display: block; }
         .slide-image picture { display: block; width: 100%; height: 100%; }
         .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.55) 100%); z-index: 10; pointer-events: none; }
         .hero-headline { position: absolute; top: 18%; left: 0; right: 0; z-index: 20; padding: 0 clamp(1.25rem, 4vw, 3rem); }
         .hero-headline-inner { max-width: 72rem; margin: 0 auto; }
-        .title-group { position: absolute; top: 0; left: 0; width: 100%; text-align: left; }
+        .title-group { width: 100%; text-align: left; }
         .hero-dock { position: relative; z-index: 60; isolation: isolate; }
         .hero-slide-dots { position: absolute; left: clamp(1.25rem, 4vw, 3rem); bottom: clamp(7rem, 14vw, 10rem); z-index: 20; display: flex; align-items: center; gap-2; }
         .top-right-badge { position: absolute; top: 2.5rem; right: 0; z-index: 20; background-color: #2b65f6; padding: 0.6rem 1.5rem; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; }
@@ -532,29 +520,28 @@ export default function Slider() {
             Global eSIM
           </div>
 
-          <div className="hero-headline" ref={titleRef}>
-            <div className="hero-headline-inner relative min-h-[160px] md:min-h-[180px]">
-              {slides.map((slide, idx) => (
-                <div
-                  key={`title-${idx}`}
-                  className="title-group"
-                  data-index={idx}
-                >
-                  <h1 className="text-[44px] md:text-[68px] lg:text-[94px] font-black leading-[1.08] tracking-tight drop-shadow-lg italic">
-                    Jeko eSIM
-                  </h1>
-                  <p className="mt-2 md:mt-3 text-[15px] md:text-lg text-white/95 font-medium drop-shadow-md">
-                    街口eSIM 成為您連接世界的接口
-                  </p>
-                  <Link
-                    href="/product"
-                    className="mt-5 md:mt-6 inline-flex items-center gap-2 bg-white text-[#1d5cc5] hover:bg-white/95 rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-colors"
-                  >
-                    查看 eSIM 方案
-                    <MaterialIcon name="arrow_forward" size={18} />
-                  </Link>
-                </div>
-              ))}
+          <div className="hero-headline">
+            <div
+              ref={titleRef}
+              className={`title-group hero-headline-inner relative ${
+                activeSlide >= HEADLINE_FROM_INDEX
+                  ? "min-h-[160px] md:min-h-[180px]"
+                  : "min-h-0"
+              }`}
+            >
+              <h1 className="text-[44px] md:text-[68px] lg:text-[94px] font-black leading-[1.08] tracking-tight drop-shadow-lg italic">
+                Jeko eSIM
+              </h1>
+              <p className="mt-2 md:mt-3 text-[15px] md:text-lg text-white/95 font-medium drop-shadow-md">
+                街口eSIM 成為您連接世界的接口
+              </p>
+              <Link
+                href="/product"
+                className="mt-5 md:mt-6 inline-flex items-center gap-2 bg-white text-[#1d5cc5] hover:bg-white/95 rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-colors"
+              >
+                查看 eSIM 方案
+                <MaterialIcon name="arrow_forward" size={18} />
+              </Link>
             </div>
           </div>
 

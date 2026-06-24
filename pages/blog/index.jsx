@@ -58,90 +58,90 @@ export default function InfoPage() {
   // 🌟 2. 核心分流邏輯 (修復 Tab 消失的 Bug)
   const { articlePosts, knowledgePosts, articleTabs, knowledgeTabs } =
     useMemo(() => {
-    const empty = {
-      articlePosts: [],
-      knowledgePosts: [],
-      articleTabs: ["全部"],
-      knowledgeTabs: ["全部"],
-    };
-
-    if (!posts?.length || !categoryMaps) {
-      return empty;
-    }
-
-    const tempArticlePosts = [];
-    const tempKnowledgePosts = [];
-    const articleCatSet = new Set(categoryMaps.articleTabs);
-    const knowledgeCatSet = new Set(categoryMaps.knowledgeTabs);
-
-    posts.forEach((post) => {
-      const {
-        isArticle,
-        isKnowledge,
-        articleSubCats,
-        knowledgeSubCats,
-        articleCountry,
-        knowledgeCountry,
-      } = classifyBlogPost(post, categoryMaps);
-
-      articleSubCats.forEach((name) => {
-        if (name !== "綜合文章") articleCatSet.add(name);
-      });
-      knowledgeSubCats.forEach((name) => {
-        if (name !== "綜合知識") knowledgeCatSet.add(name);
-      });
-
-      const dateObj = new Date(post.date);
-      const postDate = `${dateObj.getFullYear()}.${String(dateObj.getMonth() + 1).padStart(2, "0")}.${String(dateObj.getDate()).padStart(2, "0")}`;
-
-      let featureImageUrl = null;
-      if (
-        post._embedded &&
-        post._embedded["wp:featuredmedia"] &&
-        post._embedded["wp:featuredmedia"].length > 0
-      ) {
-        featureImageUrl = post._embedded["wp:featuredmedia"][0].source_url;
-      }
-      const inlineImage = extractFirstImageFromContent(post.content.rendered);
-      const finalImage =
-        featureImageUrl ||
-        inlineImage ||
-        "/images/blog/TAIWAN__thumb-_20250304.webp";
-
-      const formattedPost = {
-        id: String(post.id),
-        date: postDate,
-        title: post.title.rendered,
-        excerptHTML: post.excerpt.rendered,
-        plainExcerpt: stripHtml(post.excerpt.rendered),
-        rawContent: post.content.rendered,
-        image: finalImage,
-        slug: post.slug,
+      const empty = {
+        articlePosts: [],
+        knowledgePosts: [],
+        articleTabs: ["全部"],
+        knowledgeTabs: ["全部"],
       };
 
-      if (isArticle)
-        tempArticlePosts.push({
-          ...formattedPost,
-          tags: articleSubCats.slice(0, 3),
-          subCategories: articleSubCats,
-          country: articleCountry,
-        });
-      if (isKnowledge)
-        tempKnowledgePosts.push({
-          ...formattedPost,
-          tags: knowledgeSubCats.slice(0, 3),
-          subCategories: knowledgeSubCats,
-          country: knowledgeCountry,
-        });
-    });
+      if (!posts?.length || !categoryMaps) {
+        return empty;
+      }
 
-    return {
-      articlePosts: tempArticlePosts,
-      knowledgePosts: tempKnowledgePosts,
-      articleTabs: ["全部", ...Array.from(articleCatSet)],
-      knowledgeTabs: ["全部", ...Array.from(knowledgeCatSet)],
-    };
-  }, [posts, categoryMaps]);
+      const tempArticlePosts = [];
+      const tempKnowledgePosts = [];
+      const articleCatSet = new Set(categoryMaps.articleTabs);
+      const knowledgeCatSet = new Set(categoryMaps.knowledgeTabs);
+
+      posts.forEach((post) => {
+        const {
+          isArticle,
+          isKnowledge,
+          articleSubCats,
+          knowledgeSubCats,
+          articleCountry,
+          knowledgeCountry,
+        } = classifyBlogPost(post, categoryMaps);
+
+        articleSubCats.forEach((name) => {
+          if (name !== "綜合文章") articleCatSet.add(name);
+        });
+        knowledgeSubCats.forEach((name) => {
+          if (name !== "綜合知識") knowledgeCatSet.add(name);
+        });
+
+        const dateObj = new Date(post.date);
+        const postDate = `${dateObj.getFullYear()}.${String(dateObj.getMonth() + 1).padStart(2, "0")}.${String(dateObj.getDate()).padStart(2, "0")}`;
+
+        let featureImageUrl = null;
+        if (
+          post._embedded &&
+          post._embedded["wp:featuredmedia"] &&
+          post._embedded["wp:featuredmedia"].length > 0
+        ) {
+          featureImageUrl = post._embedded["wp:featuredmedia"][0].source_url;
+        }
+        const inlineImage = extractFirstImageFromContent(post.content.rendered);
+        const finalImage =
+          featureImageUrl ||
+          inlineImage ||
+          "/images/blog/TAIWAN__thumb-_20250304.webp";
+
+        const formattedPost = {
+          id: String(post.id),
+          date: postDate,
+          title: post.title.rendered,
+          excerptHTML: post.excerpt.rendered,
+          plainExcerpt: stripHtml(post.excerpt.rendered),
+          rawContent: post.content.rendered,
+          image: finalImage,
+          slug: post.slug,
+        };
+
+        if (isArticle)
+          tempArticlePosts.push({
+            ...formattedPost,
+            tags: articleSubCats.slice(0, 3),
+            subCategories: articleSubCats,
+            country: articleCountry,
+          });
+        if (isKnowledge)
+          tempKnowledgePosts.push({
+            ...formattedPost,
+            tags: knowledgeSubCats.slice(0, 3),
+            subCategories: knowledgeSubCats,
+            country: knowledgeCountry,
+          });
+      });
+
+      return {
+        articlePosts: tempArticlePosts,
+        knowledgePosts: tempKnowledgePosts,
+        articleTabs: ["全部", ...Array.from(articleCatSet)],
+        knowledgeTabs: ["全部", ...Array.from(knowledgeCatSet)],
+      };
+    }, [posts, categoryMaps]);
 
   const articleSubTabs = useMemo(() => {
     if (!categoryMaps || activeArticleTab === "全部") return [];
@@ -229,6 +229,11 @@ export default function InfoPage() {
         {/* ========================================== */}
         <section className="flex relative  flex-col z-50 justify-end w-full pb-20 bg-white/70 backdrop-blur-2xl backdrop-saturate-150 ">
           <div className="banner relative z-[99]   ">
+            <img
+              src="/images/eac1444f-59c2-46b3-96b9-f675b0223a62.png"
+              className="w-full"
+              alt=""
+            />
             <InfiniteCarousel />
           </div>
           <div className="w-full px-4 mx-auto max-w-[1500px] sm:w-[80%]">

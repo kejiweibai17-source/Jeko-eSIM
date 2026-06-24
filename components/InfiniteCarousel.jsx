@@ -4,21 +4,26 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 
-const CAROUSEL_IMAGES = [
+const DEFAULT_CAROUSEL_IMAGES = [
   "/images/index-001.png",
-  "/images/index-002.png",
+  "/images/865dc2a1-b546-47fe-823f-37bf4f201d43.png",
   "/images/index-05.png",
   "/images/index-003.png",
   "/images/index-004.png",
 ];
 
-export default function SilkyCarousel() {
-  const baseLength = CAROUSEL_IMAGES.length;
+export default function SilkyCarousel({
+  images = DEFAULT_CAROUSEL_IMAGES,
+  autoplayInterval = 5000,
+}) {
+  const carouselImages =
+    images.length > 0 ? images : DEFAULT_CAROUSEL_IMAGES;
+  const baseLength = carouselImages.length;
   // 複製 3 份陣列以達成無縫循環
   const extendedImages = [
-    ...CAROUSEL_IMAGES,
-    ...CAROUSEL_IMAGES,
-    ...CAROUSEL_IMAGES,
+    ...carouselImages,
+    ...carouselImages,
+    ...carouselImages,
   ];
 
   // 初始停在中間那一組
@@ -54,13 +59,13 @@ export default function SilkyCarousel() {
 
   const resetTimer = () => {
     clearInterval(timerRef.current);
-    timerRef.current = setInterval(nextSlide, 5000);
+    timerRef.current = setInterval(nextSlide, autoplayInterval);
   };
 
   useEffect(() => {
-    timerRef.current = setInterval(nextSlide, 5000);
+    timerRef.current = setInterval(nextSlide, autoplayInterval);
     return () => clearInterval(timerRef.current);
-  }, []);
+  }, [autoplayInterval]);
 
   // GSAP 絕對置中與絲滑切換邏輯
   useEffect(() => {
@@ -149,7 +154,7 @@ export default function SilkyCarousel() {
                 key={index}
                 ref={(el) => (slideRefs.current[index] = el)}
                 // 🌟 核心修改 2：把圖片寬度拉到極大 (電腦版佔畫面 72%)
-                className="w-[88vw] md:w-[80vw] lg:w-[62vw] mt-4 shrink-0"
+                className="w-[88vw] md:w-[80vw] lg:w-[42vw] mt-4 shrink-0"
               >
                 <div
                   onClick={() => {
@@ -181,7 +186,7 @@ export default function SilkyCarousel() {
 
       {/* 下方進度指示條 (Dots) */}
       <div className="mt-8 flex justify-center gap-3 relative z-10">
-        {CAROUSEL_IMAGES.map((_, index) => {
+        {carouselImages.map((_, index) => {
           const activeDotIndex = currentIndex % baseLength;
           return (
             <button

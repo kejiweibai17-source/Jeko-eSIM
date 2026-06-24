@@ -18,6 +18,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import InfiniteCarousel from "@/components/InfiniteCarousel"; // 🌟 引入剛剛建好的組件
 import CarRentalCharterSection from "../components/CarRentalCharterSection.jsx";
+import JekoRecommendSection from "../components/JekoRecommendSection.jsx";
 import AccommodationRecommendSection from "../components/AccommodationRecommendSection.jsx";
 const VuckoScroll = dynamic(() => import("@/components/CodegridScroll"), {
   ssr: false,
@@ -602,6 +603,7 @@ export default function Home() {
           <Project />
         </section>
 
+        <JekoRecommendSection />
         <CarRentalCharterSection />
         <AccommodationRecommendSection />
         {/*       
