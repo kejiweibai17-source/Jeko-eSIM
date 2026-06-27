@@ -43,6 +43,7 @@ interface MedusaCategory {
   name: string;
   handle: string;
   description?: string;
+  rank?: number;
   metadata?: Record<string, string>;
 }
 
@@ -81,22 +82,29 @@ function buildFeaturedCountries(
     });
   });
 
-  return categories.map((cat) => {
-    const meta = cat.metadata || {};
-    const stats = statsByCategory.get(cat.id) || { count: 0, minPrice: null };
+  return categories
+    .map((cat) => {
+      const meta = cat.metadata || {};
+      const stats = statsByCategory.get(cat.id) || { count: 0, minPrice: null };
 
-    return {
-      id: cat.id,
-      name: cat.name || "未命名",
-      slug: cat.handle || "/",
-      description: cat.description || meta.subtitle || "",
-      imageSrc: meta.image_url || meta.image || null,
-      productCount: stats.count,
-      minPrice: stats.minPrice,
-      regionLabel: meta.region_label || meta.region || meta.location || "",
-      badge: meta.badge || meta.tag || "",
-    };
-  });
+      return {
+        id: cat.id,
+        name: cat.name || "未命名",
+        slug: cat.handle || "/",
+        description: cat.description || meta.subtitle || "",
+        imageSrc: meta.image_url || meta.image || null,
+        productCount: stats.count,
+        minPrice: stats.minPrice,
+        regionLabel: meta.region_label || meta.region || meta.location || "",
+        badge: meta.badge || meta.tag || "",
+        rank: cat.rank ?? 9999,
+      };
+    })
+    .sort((a, b) => {
+      const rankDiff = (a.rank ?? 9999) - (b.rank ?? 9999);
+      if (rankDiff !== 0) return rankDiff;
+      return a.name.localeCompare(b.name, "zh-TW");
+    });
 }
 
 interface NavbarProps {

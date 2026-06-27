@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/router";
 import { useCart } from "../../../components/context/CartContext";
@@ -10,16 +10,31 @@ import {
   resolveOverviewNotices,
   parseOverviewNoticesByCarrier,
 } from "../../../lib/productOverviewNotices";
+import { useProductAdmin } from "../../../hooks/useProductAdmin";
+import ProductReviewsSection from "../../../components/product/ProductReviewsSection";
+import MaterialIcon from "../../../components/MaterialIcon";
 import {
   resolveDetailedContent,
   parseDetailedContentByCarrier,
 } from "../../../lib/productDetailedContent";
 import {
+  resolveUsageContent,
+  parseUsageContentByCarrier,
+} from "../../../lib/productUsageContent";
+import {
+  resolveFaqContent,
+  parseFaqContentByCarrier,
+} from "../../../lib/productFaqContent";
+import {
+  normalizeCarrierHtml,
+  hasBlockLevelCarrierHtml,
+} from "../../../lib/normalizeCarrierHtml";
+import { CARRIER_HTML_SANITIZE } from "../../../lib/carrierHtmlSanitize";
+import {
   resolveMedusaImageUrl,
   resolveMedusaImageUrls,
+  buildProductMediaList,
 } from "../../../lib/resolveMedusaImageUrl";
-import { useUser } from "../../../components/context/UserContext";
-import MaterialIcon from "../../../components/MaterialIcon";
 import EsimRefundDisclosure from "../../../components/legal/EsimRefundDisclosure";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -27,7 +42,6 @@ import { Navigation } from "swiper/modules";
 import { motion, AnimatePresence } from "framer-motion";
 import "swiper/css";
 import "swiper/css/navigation";
-import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import DOMPurify from "isomorphic-dompurify";
 import "react-quill/dist/quill.snow.css";
@@ -36,13 +50,24 @@ import {
   sanitizeProductRichTextHtml,
   PRODUCT_RICH_LINK_CLASS,
 } from "../../../lib/productRichText";
+import {
+  parseKeyFeaturesByCarrier,
+  resolveIntroBullets,
+  resolveActualExperience,
+} from "../../../lib/productKeyFeatures";
+import {
+  parseCarrierSpecsByCarrier,
+  resolveCarrierSpecs,
+  buildCarrierSpecDisplayItems,
+} from "../../../lib/productCarrierSpecs";
+import {
+  parseHotSaleTelecoms,
+  isHotSaleTelecom,
+} from "../../../lib/productHotSale";
 
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 ChartJS.register(ArcElement, Tooltip, Legend);
-
-// 🚀 Supabase (用於評論系統與圖片上傳)
-import { supabase } from "../../../lib/supabaseClient";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -50,6 +75,44 @@ function isMedusaStaticImage(src) {
   return (
     typeof src === "string" &&
     (src.includes("/static/") || /\.vercel\.app/i.test(src))
+  );
+}
+
+function ProductMediaSlide({ item, fill = false, className = "", priority = false }) {
+  if (item.type === "video") {
+    return (
+      <video
+        src={item.src}
+        controls
+        playsInline
+        preload="metadata"
+        className={className}
+      />
+    );
+  }
+
+  if (fill) {
+    return (
+      <Image
+        src={item.src}
+        alt={item.alt || "product"}
+        fill
+        sizes="(max-width: 1024px) 100vw, 55vw"
+        className={className}
+        priority={priority}
+        unoptimized={isMedusaStaticImage(item.src)}
+      />
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={item.src}
+      alt={item.alt || "product"}
+      className={className}
+      draggable={false}
+    />
   );
 }
 
@@ -171,69 +234,6 @@ const CARRIER_INFO_MAP = {
   },
 };
 
-const CARRIER_SPECS_DATA = {
-  "SoftBank / KDDI": [
-    {
-      label: "訊號覆蓋範圍",
-      value: "東京、京都、廣島、關東、長崎、大阪等日本各城市及旅遊目的地。",
-    },
-    { label: "電信業者", value: "KDDI (5G) / Softbank (5G)" },
-    { label: "速度", value: "4G / LTE / 5G" },
-    { label: "方案類型", value: "僅數據流量" },
-    { label: "網路共用 / 熱點功能", value: "支持" },
-    { label: "電話號碼", value: "無" },
-    { label: "通話", value: "不支持，只能透過應用程式（網路通話，即 VoIP）。" },
-    { label: "簡訊", value: "無" },
-    { label: "eKYC (身分驗證)", value: "不需要" },
-    {
-      label: "效期政策",
-      value:
-        "一旦 eSIM 連接到支援的網路並開始產生數據訪問互聯網，有效期即開始。我們建議您在到達目的地後添加 eSIM。您可以提前安裝 eSIM，但請記得安裝後立即將其關閉，以避免有效期提前開始。",
-      fullWidth: true,
-    },
-  ],
-  "AU(KDDI)": [
-    {
-      label: "訊號覆蓋範圍",
-      value: "東京、京都、廣島、關東、長崎、大阪等日本各城市及旅遊目的地。",
-    },
-    { label: "電信業者", value: "KDDI 5G" },
-
-    { label: "速度", value: "4G / LTE / 5G" },
-    { label: "方案類型", value: "僅數據流量" },
-    { label: "網路共用／熱點功能", value: "支持" },
-    { label: "通話", value: "不支持，只能透過應用程式（網路通話，即 VoIP）。" },
-    {
-      label: "效期政策",
-      value:
-        "一旦 eSIM 連接到支援的網路並開始產生數據訪問互聯網，有效期限即開始。我們建議您在到達目的地後添加 eSIM。",
-      fullWidth: true,
-    },
-  ],
-  "IIJ Docomo": [
-    {
-      label: "訊號覆蓋範圍",
-      value: "東京、京都、廣島、關東、長崎、大阪等日本各城市及旅遊目的地。",
-    },
-    { label: "電信業者", value: "IIJ(Docomo) LTE" },
-    { label: "速度", value: "4G / LTE" },
-    { label: "方案類型", value: "僅數據流量" },
-    {
-      label: "效期政策",
-      value:
-        "有效期於eSIM下載到您的裝置後立即開始計算。請在準備好使用時再安裝eSIM。",
-      fullWidth: true,
-    },
-  ],
-  default: [
-    {
-      label: "說明",
-      value: "請選擇上方的電信商以查看詳細技術規格。",
-      fullWidth: true,
-    },
-  ],
-};
-
 const stripHtml = (html) =>
   html ? html.replace(/<[^>]*>?/gm, "").substring(0, 160) + "..." : "";
 
@@ -256,8 +256,38 @@ function FeatureBulletText({ children, className = "" }) {
   );
 }
 
-/** 概覽分頁：FUP 資訊 + 啟用注意（後台 Medusa metadata 可編輯） */
-function ProductOverviewNotices({ notices, carrierFallback }) {
+function ProductActualExperience({ text }) {
+  if (!text?.trim()) return null;
+
+  return (
+    <div className="mt-4 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white px-4 py-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#007aff]/10">
+          <MaterialIcon name="speed" size={16} className="text-[#007aff]" />
+        </div>
+        <h4 className="text-sm font-bold text-slate-900">實際體驗</h4>
+      </div>
+      <FeatureBulletText className="text-sm text-slate-700 leading-relaxed">
+        {text}
+      </FeatureBulletText>
+    </div>
+  );
+}
+
+/** 概覽分頁：FUP 資訊 + 啟用注意（管理者可前台編輯） */
+function ProductOverviewNotices({
+  notices,
+  carrierFallback,
+  product,
+  carrier,
+  onProductUpdate,
+}) {
+  const { isAdmin, adminChecked, authHeaders } = useProductAdmin();
+  const [isEditing, setIsEditing] = useState(false);
+  const [fupDraft, setFupDraft] = useState("");
+  const [activationDraft, setActivationDraft] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   const fupText =
     notices?.fup_notice ||
     (carrierFallback?.policyTitle && carrierFallback?.policyDesc
@@ -266,96 +296,159 @@ function ProductOverviewNotices({ notices, carrierFallback }) {
   const activationText =
     notices?.activation_notice || carrierFallback?.note || "";
 
-  if (!fupText && !activationText) return null;
+  useEffect(() => {
+    if (!isEditing) {
+      setFupDraft(notices?.fup_notice || "");
+      setActivationDraft(notices?.activation_notice || "");
+    }
+  }, [notices, isEditing]);
+
+  const saveOverview = async () => {
+    if (!carrier) {
+      alert("請先選擇電信商後再儲存");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/admin/product-overview-notices", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({
+          productId: product.id,
+          carrier,
+          fup_notice: fupDraft.trim(),
+          activation_notice: activationDraft.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.detail || "儲存失敗");
+      onProductUpdate?.({
+        overview_notices_by_carrier: data.overview_notices_by_carrier,
+      });
+      setIsEditing(false);
+      alert(`已儲存「${carrier}」的概覽說明`);
+    } catch (error) {
+      alert(error.message || "儲存失敗");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const showDisplay = !isEditing && (fupText || activationText);
+  const showEmptyAdmin =
+    !isEditing && !fupText && !activationText && adminChecked && isAdmin;
+
+  if (!showDisplay && !isEditing && !showEmptyAdmin) return null;
 
   return (
     <div className="mt-4 space-y-3">
-      {fupText && (
-        <div className="flex gap-3 rounded-lg border border-slate-200 bg-sky-50/80 px-4 py-3.5 text-sm text-slate-700 leading-relaxed border-l-4 border-l-sky-500">
-          <MaterialIcon
-            name="info"
-            size={20}
-            className="text-sky-600 shrink-0 mt-0.5"
-          />
-          <FeatureBulletText className="flex-1 min-w-0">
-            {fupText}
-          </FeatureBulletText>
+      {adminChecked && isAdmin && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              if (!carrier) {
+                alert("請先選擇電信商，再編輯概覽說明");
+                return;
+              }
+              if (!isEditing) {
+                setFupDraft(notices?.fup_notice || "");
+                setActivationDraft(notices?.activation_notice || "");
+              }
+              setIsEditing(!isEditing);
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold text-white transition-colors ${isEditing ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
+          >
+            <MaterialIcon name={isEditing ? "close" : "edit"} size={14} />
+            {isEditing ? "取消編輯" : "編輯概覽"}
+          </button>
         </div>
       )}
-      {activationText && (
-        <div className="flex gap-3 rounded-lg border border-slate-200 bg-amber-50/90 px-4 py-3.5 text-sm text-slate-700 leading-relaxed border-l-4 border-l-amber-400">
-          <MaterialIcon
-            name="warning"
-            size={20}
-            className="text-amber-600 shrink-0 mt-0.5"
-          />
-          <FeatureBulletText className="flex-1 min-w-0">
-            {activationText}
-          </FeatureBulletText>
+
+      {isEditing && isAdmin ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3 shadow-sm">
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            正在編輯概覽說明 · 電信商：<strong>{carrier}</strong>
+          </p>
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">
+              FUP / 公平使用說明
+            </label>
+            <textarea
+              value={fupDraft}
+              onChange={(e) => setFupDraft(e.target.value)}
+              rows={3}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
+              placeholder="例：公平使用政策 (FUP): 不同電信商擁有不同的流量公平使用原則..."
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">
+              啟用注意事項
+            </label>
+            <textarea
+              value={activationDraft}
+              onChange={(e) => setActivationDraft(e.target.value)}
+              rows={3}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
+              placeholder="例：注意：此線路為日本 IP。"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={saveOverview}
+            disabled={isSaving}
+            className="w-full py-2.5 bg-[#00befa] text-white font-bold rounded-lg text-sm disabled:opacity-50"
+          >
+            {isSaving ? "儲存中..." : "儲存概覽說明"}
+          </button>
         </div>
+      ) : (
+        <>
+          {fupText && (
+            <div className="flex gap-3 rounded-lg border border-slate-200 bg-sky-50/80 px-4 py-3.5 text-sm text-slate-700 leading-relaxed border-l-4 border-l-sky-500">
+              <MaterialIcon
+                name="info"
+                size={20}
+                className="text-sky-600 shrink-0 mt-0.5"
+              />
+              <FeatureBulletText className="flex-1 min-w-0">
+                {fupText}
+              </FeatureBulletText>
+            </div>
+          )}
+          {activationText && (
+            <div className="flex gap-3 rounded-lg border border-slate-200 bg-amber-50/90 px-4 py-3.5 text-sm text-slate-700 leading-relaxed border-l-4 border-l-amber-400">
+              <MaterialIcon
+                name="warning"
+                size={20}
+                className="text-amber-600 shrink-0 mt-0.5"
+              />
+              <FeatureBulletText className="flex-1 min-w-0">
+                {activationText}
+              </FeatureBulletText>
+            </div>
+          )}
+          {showEmptyAdmin && (
+            <p className="text-xs text-slate-400">
+              「{carrier}」尚無概覽說明，點「編輯概覽」新增。
+            </p>
+          )}
+        </>
       )}
     </div>
   );
 }
-
-/** 解析 Medusa metadata.key_features_by_carrier（JSON 字串或物件） */
-const parseKeyFeaturesByCarrier = (raw) => {
-  if (!raw) return null;
-  if (typeof raw === "object" && !Array.isArray(raw)) {
-    return Object.fromEntries(
-      Object.entries(raw).map(([k, v]) => [
-        k,
-        Array.isArray(v) ? v.map(String).filter(Boolean) : [],
-      ]),
-    );
-  }
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return Object.fromEntries(
-          Object.entries(parsed).map(([k, v]) => [
-            k,
-            Array.isArray(v) ? v.map(String).filter(Boolean) : [],
-          ]),
-        );
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  return null;
-};
-
-/** 依 key 找電信商重點（忽略大小寫與前後空白） */
-const findCarrierBullets = (fromMeta, carrierName) => {
-  if (!fromMeta || !carrierName || carrierName === "default") return null;
-  const carrier = String(carrierName).trim();
-  if (fromMeta[carrier]?.length) return fromMeta[carrier];
-  const key = Object.keys(fromMeta).find(
-    (k) => k.trim().toLowerCase() === carrier.toLowerCase(),
-  );
-  return key && fromMeta[key]?.length ? fromMeta[key] : null;
-};
-
-/** 依電信商取得重點特色（僅讀 Medusa metadata，不寫死國家/電信商） */
-const resolveIntroBullets = (product, carrierName) => {
-  const fromMeta = parseKeyFeaturesByCarrier(product?.key_features_by_carrier);
-  if (!fromMeta || !Object.keys(fromMeta).length) return [];
-  const matched = findCarrierBullets(fromMeta, carrierName);
-  if (matched?.length) return matched;
-  if (fromMeta.default?.length) return fromMeta.default;
-  return [];
-};
 
 const ANKER_BLUE = "#00befa";
 
 const PRODUCT_SUB_NAV = [
   { id: "purchase", label: "購買", href: "#purchase-section" },
   { id: "overview", label: "概覽", href: "#product-tabs" },
-  { id: "specs", label: "規格", href: "#product-specs" },
+  { id: "specs", label: "使用介紹", href: "#product-usage" },
   { id: "comparison", label: "比較", href: "#product-comparison" },
-  { id: "faq", label: "FAQ", href: "#product-faq" },
+  { id: "faq", label: "常見問題", href: "#product-faq" },
   { id: "reviews", label: "評論", href: "#product-reviews" },
 ];
 
@@ -543,7 +636,7 @@ function ProductImageLightbox({
             {showThumbGrid ? (
               <div className="w-full max-w-5xl px-6 py-8 overflow-y-auto max-h-full">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {images.map((img, idx) => (
+                  {images.map((item, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -554,12 +647,20 @@ function ProductImageLightbox({
                           : "border-transparent opacity-70 hover:opacity-100"
                       }`}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.src}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                      {item.type === "video" ? (
+                        <div className="absolute inset-0 bg-slate-900 flex items-center justify-center">
+                          <MaterialIcon
+                            name="play_circle"
+                            size={36}
+                            className="text-white"
+                          />
+                        </div>
+                      ) : (
+                        <ProductMediaSlide
+                          item={item}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -581,15 +682,21 @@ function ProductImageLightbox({
                 onSlideChange={(s) => setLbIndex(s.realIndex)}
                 className="w-full h-full max-w-[min(96vw,1200px)] product-gallery-lb px-14 sm:px-20 lg:px-28"
               >
-                {images.map((img, idx) => (
+                {images.map((item, idx) => (
                   <SwiperSlide key={idx}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.src}
-                      alt={img.alt || `商品圖 ${idx + 1}`}
-                      className="max-h-[calc(100vh-220px)] max-w-full w-auto mx-auto object-contain select-none"
-                      draggable={false}
-                    />
+                    {item.type === "video" ? (
+                      <div className="flex items-center justify-center w-full h-full">
+                        <ProductMediaSlide
+                          item={item}
+                          className="max-h-[calc(100vh-220px)] max-w-full w-auto mx-auto object-contain bg-black rounded-lg"
+                        />
+                      </div>
+                    ) : (
+                      <ProductMediaSlide
+                        item={item}
+                        className="max-h-[calc(100vh-220px)] max-w-full w-auto mx-auto object-contain select-none"
+                      />
+                    )}
                   </SwiperSlide>
                 ))}
               </Swiper>
@@ -600,7 +707,7 @@ function ProductImageLightbox({
           {!showThumbGrid && images.length > 1 && (
             <div className="relative z-30 shrink-0 pb-8 sm:pb-10 pt-2">
               <div className="flex justify-center items-center gap-2 sm:gap-2.5 px-4 overflow-x-auto max-w-[100vw]">
-                {images.map((img, idx) => (
+                {images.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
@@ -610,15 +717,23 @@ function ProductImageLightbox({
                         ? "border-2 border-[#00befa] opacity-100 shadow-[0_0_0_1px_rgba(0,190,250,0.4)]"
                         : "border-2 border-transparent opacity-45 hover:opacity-75"
                     }`}
-                    aria-label={`第 ${idx + 1} 張`}
+                    aria-label={`第 ${idx + 1} 個媒體`}
                     aria-current={lbIndex === idx ? "true" : undefined}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.src}
-                      alt=""
-                      className="w-full h-full object-cover bg-black/20"
-                    />
+                    {item.type === "video" ? (
+                      <div className="absolute inset-0 bg-slate-900 flex items-center justify-center">
+                        <MaterialIcon
+                          name="play_circle"
+                          size={22}
+                          className="text-white"
+                        />
+                      </div>
+                    ) : (
+                      <ProductMediaSlide
+                        item={item}
+                        className="w-full h-full object-cover bg-black/20"
+                      />
+                    )}
                   </button>
                 ))}
               </div>
@@ -721,9 +836,6 @@ function ServiceBenefits() {
     </div>
   );
 }
-
-const VIDEO_REGEX = /\.(mp4|webm|mov|m4v|avi|mkv|qt)$/i;
-const ADMIN_EMAIL = "bob112722761236tom@gmail.com";
 
 // ==========================================
 // 2. UI 組件設定 (Modal, Tabs 等)
@@ -854,177 +966,312 @@ const DataEstimatorModal = ({ isOpen, onClose }) => {
   );
 };
 
-const ComparisonTable = () => (
-  <div className="overflow-x-auto rounded-xl border shadow-sm my-8 text-sm text-left border-collapse min-w-full">
-    <table className="w-full">
-      <thead>
-        <tr className="bg-slate-900 text-white">
-          <th className="p-4 w-1/4">產品</th>
-          <th className="p-4 w-1/6">運營商</th>
-          <th className="p-4 w-1/6">最適合</th>
-          <th className="p-4">優點與注意事項</th>
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y">
-        <tr>
-          <td className="p-4 font-bold">日本 eSIM AU</td>
-          <td className="p-4">KDDI</td>
-          <td className="p-4">串流愛好者</td>
-          <td className="p-4 text-xs inline-flex items-center gap-1 flex-wrap">
-            <MaterialIcon
-              name="check_circle"
-              size={14}
-              className="text-emerald-600"
-            />{" "}
-            本地網絡
-            <MaterialIcon
-              name="check_circle"
-              size={14}
-              className="text-emerald-600"
-            />{" "}
-            支援 TikTok
-          </td>
-        </tr>
-        <tr className="bg-slate-50">
-          <td className="p-4 font-bold">SoftBank / KDDI 雙網</td>
-          <td className="p-4">SB / KDDI</td>
-          <td className="p-4">多城市旅行者</td>
-          <td className="p-4 text-xs inline-flex items-center gap-1 flex-wrap">
-            <MaterialIcon
-              name="check_circle"
-              size={14}
-              className="text-emerald-600"
-            />{" "}
-            雙網切換
-            <MaterialIcon
-              name="cancel"
-              size={14}
-              className="text-red-500"
-            />{" "}
-            無法訪問 TikTok
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-);
+const CARRIER_HTML_SANITIZE_CONFIG = CARRIER_HTML_SANITIZE;
 
-const DETAILED_CONTENT_SANITIZE = {
-  ALLOWED_TAGS: [
-    "p",
-    "br",
-    "strong",
-    "b",
-    "em",
-    "i",
-    "u",
-    "a",
-    "ul",
-    "ol",
-    "li",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "table",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-    "img",
-    "div",
-    "span",
-    "blockquote",
-  ],
-  ALLOWED_ATTR: [
-    "href",
-    "class",
-    "style",
-    "src",
-    "alt",
-    "target",
-    "rel",
-    "width",
-    "height",
+const CARRIER_QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    [{ size: ["small", false, "large", "huge"] }],
+    ["bold", "italic", "underline", "strike", "blockquote"],
+    [{ align: [] }],
+    [
+      { list: "ordered" },
+      { list: "bullet" },
+      { indent: "-1" },
+      { indent: "+1" },
+    ],
+    [{ color: [] }, { background: [] }],
+    ["link", "image", "video"],
+    ["clean"],
   ],
 };
+
+function CarrierHtmlDisplay({ html, className = "", accordion = false }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const root = ref.current;
+    if (!root || !html || !accordion) return undefined;
+
+    const cleanups = [];
+
+    const bindAccordion = ({
+      triggerSelector,
+      itemSelector,
+      panelSelector,
+      openClass,
+      panelOpenClass,
+    }) => {
+      root.querySelectorAll(triggerSelector).forEach((trigger) => {
+        const item = trigger.closest(itemSelector);
+        const panel = item?.querySelector(panelSelector);
+        if (!item || !panel) return;
+
+        trigger.style.cursor = "pointer";
+
+        const toggle = (event) => {
+          event?.preventDefault();
+          const isOpen = item.classList.contains(openClass);
+
+          root.querySelectorAll(itemSelector).forEach((entry) => {
+            entry.classList.remove(openClass);
+            const entryPanel = entry.querySelector(panelSelector);
+            const entryTrigger = entry.querySelector(triggerSelector);
+            if (entryPanel) {
+              entryPanel.classList.remove(panelOpenClass);
+              entryPanel.style.display = "none";
+            }
+            if (entryTrigger?.setAttribute) {
+              entryTrigger.setAttribute("aria-expanded", "false");
+            }
+          });
+
+          if (!isOpen) {
+            item.classList.add(openClass);
+            panel.classList.add(panelOpenClass);
+            panel.style.display = "block";
+            if (trigger.setAttribute) {
+              trigger.setAttribute("aria-expanded", "true");
+            }
+          }
+        };
+
+        const onKeyDown = (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggle(event);
+          }
+        };
+
+        trigger.addEventListener("click", toggle);
+        trigger.addEventListener("keydown", onKeyDown);
+        cleanups.push(() => {
+          trigger.removeEventListener("click", toggle);
+          trigger.removeEventListener("keydown", onKeyDown);
+        });
+      });
+    };
+
+    bindAccordion({
+      triggerSelector: ".jeko-faq-trigger",
+      itemSelector: ".jeko-faq-item",
+      panelSelector: ".jeko-faq-panel",
+      openClass: "is-open",
+      panelOpenClass: "is-open",
+    });
+
+    bindAccordion({
+      triggerSelector: ".t4s-accor-title",
+      itemSelector: ".t4s-tab-wrapper",
+      panelSelector: ".t4s-tab-content",
+      openClass: "t4s-active",
+      panelOpenClass: "t4s-active",
+    });
+
+    return () => cleanups.forEach((fn) => fn());
+  }, [html, accordion]);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+function CarrierHtmlEditor({
+  carrier,
+  content,
+  onChange,
+  editMode,
+  onEditModeChange,
+  onSave,
+  isSaving,
+  sectionLabel,
+  preferHtmlMode = false,
+}) {
+  const handleModeChange = (mode) => {
+    if (
+      mode === "visual" &&
+      (preferHtmlMode || hasBlockLevelCarrierHtml(content))
+    ) {
+      alert(
+        "此區塊含區塊級 HTML 排版，請使用「HTML 原始碼」貼上與編輯。切換視覺化會把標籤轉成純文字。",
+      );
+      return;
+    }
+    onEditModeChange(mode);
+  };
+
+  return (
+    <div className="mb-10 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 text-xs text-amber-900">
+        正在編輯{sectionLabel} · 電信商：
+        <strong className="font-bold ml-1">{carrier}</strong>
+        <span className="text-amber-700 ml-2">
+          （各電信商內容獨立儲存，切換電信商前請先儲存）
+        </span>
+      </div>
+      {preferHtmlMode ? (
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-900">
+          含表格／多欄排版請在「HTML 原始碼」貼上，儲存後再預覽，不要切到視覺化編輯。
+        </div>
+      ) : null}
+      <div className="flex items-center gap-2 bg-slate-100 p-2 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => handleModeChange("visual")}
+          className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "visual" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
+        >
+          <MaterialIcon name="visibility" size={16} /> 視覺化編輯
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange("html")}
+          className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "html" ? "bg-slate-800 text-white shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
+        >
+          <MaterialIcon name="code" size={16} /> HTML 原始碼
+        </button>
+      </div>
+      <div className="relative">
+        {editMode === "visual" ? (
+          <div className="bg-white">
+            <ReactQuill
+              theme="snow"
+              value={content}
+              onChange={onChange}
+              modules={CARRIER_QUILL_MODULES}
+              className="h-[400px] pb-10"
+            />
+          </div>
+        ) : (
+          <textarea
+            value={content}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full h-[442px] p-5 font-mono text-sm leading-relaxed bg-[#1e1e1e] text-[#d4d4d4] focus:outline-none resize-none"
+            placeholder="請在此貼上 HTML 原始碼..."
+            spellCheck="false"
+          />
+        )}
+      </div>
+      <div className="flex justify-end items-center p-4 bg-gray-50 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isSaving}
+          className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 shadow-sm"
+        >
+          {isSaving ? (
+            "儲存中..."
+          ) : (
+            <>
+              <MaterialIcon name="save" size={16} />
+              儲存並發布
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ==========================================
 // 產品動態介紹區域 (依電信商 + 管理者專用編輯)
 // ==========================================
 const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
   const [activeTab, setActiveTab] = useState("desc");
-  const { data: session } = useSession();
-  const { token } = useUser();
+  const { isAdmin, adminChecked, authHeaders } = useProductAdmin();
 
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminChecked, setAdminChecked] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [editMode, setEditMode] = useState("visual");
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [isEditingUsage, setIsEditingUsage] = useState(false);
+  const [isEditingFaq, setIsEditingFaq] = useState(false);
+  const [descContent, setDescContent] = useState("");
+  const [usageContent, setUsageContent] = useState("");
+  const [faqContent, setFaqContent] = useState("");
+  const [descEditMode, setDescEditMode] = useState("html");
+  const [usageEditMode, setUsageEditMode] = useState("html");
+  const [faqEditMode, setFaqEditMode] = useState("html");
+  const [isSavingDesc, setIsSavingDesc] = useState(false);
+  const [isSavingUsage, setIsSavingUsage] = useState(false);
+  const [isSavingFaq, setIsSavingFaq] = useState(false);
 
   const safeCarrier = selectedCarrier || null;
-  const specs =
-    (safeCarrier && CARRIER_SPECS_DATA[safeCarrier]) ||
-    CARRIER_SPECS_DATA["default"];
-  const introBullets = resolveIntroBullets(product, safeCarrier);
   const displayedContent = resolveDetailedContent(product, safeCarrier);
+  const displayedUsage = resolveUsageContent(product, safeCarrier);
+  const displayedFaq = resolveFaqContent(product, safeCarrier);
   const sanitizedDisplayHtml = useMemo(
-    () => DOMPurify.sanitize(displayedContent || "", DETAILED_CONTENT_SANITIZE),
+    () =>
+      DOMPurify.sanitize(
+        normalizeCarrierHtml(displayedContent || ""),
+        CARRIER_HTML_SANITIZE_CONFIG,
+      ),
     [displayedContent],
   );
+  const sanitizedUsageHtml = useMemo(
+    () =>
+      DOMPurify.sanitize(
+        normalizeCarrierHtml(displayedUsage || ""),
+        CARRIER_HTML_SANITIZE_CONFIG,
+      ),
+    [displayedUsage],
+  );
+  const sanitizedFaqHtml = useMemo(
+    () =>
+      DOMPurify.sanitize(
+        normalizeCarrierHtml(displayedFaq || ""),
+        CARRIER_HTML_SANITIZE_CONFIG,
+      ),
+    [displayedFaq],
+  );
+  const faqHasSectionHead = sanitizedFaqHtml.includes("jeko-section-head");
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const headers = {};
-        if (token) headers.Authorization = `Bearer ${token}`;
-        const res = await fetch("/api/admin/verify", {
-          credentials: "include",
-          headers,
-        });
-        const data = res.ok ? await res.json() : { isAdmin: false };
-        if (!cancelled) setIsAdmin(!!data.isAdmin);
-      } catch {
-        if (!cancelled) setIsAdmin(false);
-      } finally {
-        if (!cancelled) setAdminChecked(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, session?.user?.email]);
-
-  useEffect(() => {
-    if (!isEditing) {
-      setContent(resolveDetailedContent(product, safeCarrier));
+    if (!isEditingDesc) {
+      setDescContent(
+        normalizeCarrierHtml(resolveDetailedContent(product, safeCarrier)),
+      );
     }
-  }, [product, safeCarrier, isEditing]);
+  }, [product, safeCarrier, isEditingDesc]);
 
-  const handleSave = async () => {
+  useEffect(() => {
+    if (!isEditingUsage) {
+      setUsageContent(
+        normalizeCarrierHtml(resolveUsageContent(product, safeCarrier)),
+      );
+    }
+  }, [product, safeCarrier, isEditingUsage]);
+
+  useEffect(() => {
+    if (!isEditingFaq) {
+      setFaqContent(
+        normalizeCarrierHtml(resolveFaqContent(product, safeCarrier)),
+      );
+    }
+  }, [product, safeCarrier, isEditingFaq]);
+
+  const saveCarrierContent = async ({
+    contentType,
+    html,
+    setSaving,
+    closeEditing,
+    successLabel,
+  }) => {
     if (!safeCarrier) {
       alert("請先選擇電信商後再儲存");
       return;
     }
-    setIsSaving(true);
+    setSaving(true);
     try {
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
-
       const res = await fetch("/api/admin/product-detailed-content", {
         method: "POST",
         credentials: "include",
-        headers,
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           productId: product.id,
           carrier: safeCarrier,
-          html: content,
+          html: normalizeCarrierHtml(html),
+          contentType,
         }),
       });
       const data = await res.json();
@@ -1032,41 +1279,33 @@ const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
         throw new Error(data.error || data.detail || "儲存失敗");
       }
 
-      onProductUpdate?.({
-        detailed_content_by_carrier: data.detailed_content_by_carrier,
-      });
-      setIsEditing(false);
-      alert(`已儲存「${safeCarrier}」的產品介紹`);
+      if (contentType === "usage") {
+        onProductUpdate?.({
+          usage_content_by_carrier: data.usage_content_by_carrier,
+        });
+      } else if (contentType === "faq") {
+        onProductUpdate?.({
+          faq_content_by_carrier: data.faq_content_by_carrier,
+        });
+      } else {
+        onProductUpdate?.({
+          detailed_content_by_carrier: data.detailed_content_by_carrier,
+        });
+      }
+      closeEditing();
+      alert(`已儲存「${safeCarrier}」的${successLabel}`);
     } catch (error) {
       alert(error.message || "儲存失敗");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
   const tabs = [
     { id: "desc", label: "產品介紹" },
-    { id: "specs", label: "套餐參數" },
-    { id: "install", label: "安裝/激活" },
+    { id: "usage", label: "使用介紹" },
+    { id: "faq", label: "常見問題" },
   ];
-
-  const quillModules = {
-    toolbar: [
-      [{ header: [1, 2, 3, 4, 5, 6, false] }],
-      [{ size: ["small", false, "large", "huge"] }],
-      ["bold", "italic", "underline", "strike", "blockquote"],
-      [{ align: [] }],
-      [
-        { list: "ordered" },
-        { list: "bullet" },
-        { indent: "-1" },
-        { indent: "+1" },
-      ],
-      [{ color: [] }, { background: [] }],
-      ["link", "image", "video"],
-      ["clean"],
-    ],
-  };
 
   return (
     <div id="product-tabs" className="mt-16">
@@ -1074,7 +1313,13 @@ const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            type="button"
+            onClick={() => {
+              setIsEditingDesc(false);
+              setIsEditingUsage(false);
+              setIsEditingFaq(false);
+              setActiveTab(tab.id);
+            }}
             className={`px-5 sm:px-8 py-3.5 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? "border-[#00befa] text-slate-900"
@@ -1093,7 +1338,7 @@ const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
                 <MaterialIcon
                   name="travel_explore"
                   size={24}
-                  className="text-[#00befa]"
+                  className="text-[#2B59C3]"
                 />
                 關於 {product.name}
               </h3>
@@ -1105,14 +1350,20 @@ const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
                       alert("請先選擇電信商，再編輯該電信商的產品介紹");
                       return;
                     }
-                    if (!isEditing) {
-                      setContent(resolveDetailedContent(product, safeCarrier));
+                    if (!isEditingDesc) {
+                      setDescContent(
+                        normalizeCarrierHtml(
+                          resolveDetailedContent(product, safeCarrier),
+                        ),
+                      );
                     }
-                    setIsEditing(!isEditing);
+                    setIsEditingUsage(false);
+                    setIsEditingFaq(false);
+                    setIsEditingDesc(!isEditingDesc);
                   }}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded text-sm font-bold text-white transition-colors ${isEditing ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded text-sm font-bold text-white transition-colors ${isEditingDesc ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
                 >
-                  {isEditing ? (
+                  {isEditingDesc ? (
                     <>
                       <MaterialIcon name="close" size={16} /> 取消編輯
                     </>
@@ -1125,110 +1376,37 @@ const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
               )}
             </div>
 
-            {isEditing && isAdmin ? (
-              <div className="mb-10 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 text-xs text-amber-900">
-                  正在編輯電信商：
-                  <strong className="font-bold ml-1">{safeCarrier}</strong>
-                  <span className="text-amber-700 ml-2">
-                    （各電信商內容獨立儲存，切換電信商前請先儲存）
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 bg-slate-100 p-2 border-b border-gray-200">
-                  <button
-                    onClick={() => setEditMode("visual")}
-                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "visual" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
-                  >
-                    <MaterialIcon name="visibility" size={16} /> 視覺化編輯
-                  </button>
-                  <button
-                    onClick={() => setEditMode("html")}
-                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${editMode === "html" ? "bg-slate-800 text-white shadow-sm" : "text-gray-500 hover:bg-gray-200"}`}
-                  >
-                    <MaterialIcon name="code" size={16} /> HTML 原始碼
-                  </button>
-                </div>
-                <div className="relative">
-                  {editMode === "visual" ? (
-                    <div className="bg-white">
-                      <ReactQuill
-                        theme="snow"
-                        value={content}
-                        onChange={setContent}
-                        modules={quillModules}
-                        className="h-[400px] pb-10"
-                      />
-                    </div>
-                  ) : (
-                    <textarea
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      className="w-full h-[442px] p-5 font-mono text-sm leading-relaxed bg-[#1e1e1e] text-[#d4d4d4] focus:outline-none resize-none"
-                      placeholder="請在此貼上包含 Tailwind CSS 或自定義 style 的 HTML 原始碼..."
-                      spellCheck="false"
-                    />
-                  )}
-                </div>
-                <div className="flex justify-end items-center p-4 bg-gray-50 border-t border-gray-200">
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 shadow-sm"
-                  >
-                    {isSaving ? (
-                      "儲存中..."
-                    ) : (
-                      <>
-                        <MaterialIcon
-                          name="save"
-                          size={16}
-                          className="inline mr-1"
-                        />
-                        儲存並發布
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+            {isEditingDesc && isAdmin ? (
+              <CarrierHtmlEditor
+                carrier={safeCarrier}
+                content={descContent}
+                onChange={setDescContent}
+                editMode={descEditMode}
+                onEditModeChange={setDescEditMode}
+                isSaving={isSavingDesc}
+                sectionLabel="產品介紹"
+                preferHtmlMode
+                onSave={() =>
+                  saveCarrierContent({
+                    contentType: "detailed",
+                    html: descContent,
+                    setSaving: setIsSavingDesc,
+                    closeEditing: () => setIsEditingDesc(false),
+                    successLabel: "產品介紹",
+                  })
+                }
+              />
             ) : (
               <div className="mb-10 text-slate-600 text-sm leading-relaxed">
-                <div className="space-y-3 mb-6 bg-slate-50 p-5 rounded-xl border border-gray-100">
-                  <h4 className="font-bold text-slate-800 mb-2 inline-flex items-center gap-1.5">
-                    <MaterialIcon
-                      name="bolt"
-                      size={18}
-                      className="text-amber-500"
-                    />
-                    {safeCarrier || "此方案"} 專屬特色：
-                  </h4>
-                  {introBullets.length > 0 ? (
-                    <div className="space-y-4">
-                      {introBullets.map((point, idx) => (
-                        <div key={idx} className="flex gap-2 items-start">
-                          <MaterialIcon
-                            name="check_circle"
-                            size={16}
-                            className="text-blue-500 mt-0.5 shrink-0"
-                          />
-                          <FeatureBulletText className="text-slate-600 flex-1 min-w-0">
-                            {point}
-                          </FeatureBulletText>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-slate-400 text-sm">
-                      {safeCarrier
-                        ? "此電信商尚未設定重點特色，請至 Medusa 後台商品頁填寫。"
-                        : "請先選擇電信商。"}
-                    </p>
-                  )}
-                </div>
-
                 {sanitizedDisplayHtml ? (
-                  <div className="mt-8 pt-8 border-t border-gray-100">
-                    <h4 className="font-bold text-slate-800 mb-4">
-                      📖 方案詳細說明
+                  <div>
+                    <h4 className="font-bold text-slate-800 mb-4 inline-flex items-center gap-2">
+                      <MaterialIcon
+                        name="menu_book"
+                        size={20}
+                        className="text-[#2B59C3]"
+                      />
+                      方案詳細說明
                       {safeCarrier ? (
                         <span className="text-gray-400 font-normal text-sm ml-2">
                           （{safeCarrier}）
@@ -1239,12 +1417,12 @@ const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
                       dangerouslySetInnerHTML={{
                         __html: sanitizedDisplayHtml,
                       }}
-                      className="prose max-w-none product-content-wrapper"
+                      className="max-w-none product-content-wrapper"
                     />
                   </div>
                 ) : (
                   safeCarrier && (
-                    <p className="mt-6 text-sm text-slate-400">
+                    <p className="text-sm text-slate-400">
                       「{safeCarrier}」尚無產品介紹內容。
                       {isAdmin ? " 點「編輯內容」新增。" : ""}
                     </p>
@@ -1252,709 +1430,196 @@ const ProductTabs = ({ product, selectedCarrier, onProductUpdate }) => {
                 )}
               </div>
             )}
-            <div id="product-comparison">
-              <ComparisonTable />
-            </div>
           </motion.div>
         )}
 
-        {activeTab === "specs" && (
+        {activeTab === "usage" && (
           <motion.div
-            id="product-specs"
+            id="product-usage"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-slate-50 rounded-2xl p-6 md:p-10"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
-              {specs.map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`flex flex-col ${item.fullWidth ? "md:col-span-2" : ""}`}
-                >
-                  <span className="text-sm font-bold text-slate-900 mb-1">
-                    {item.label}
-                  </span>
-                  <span className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === "install" && (
-          <div id="product-faq" className="text-center py-10 text-gray-500">
-            <h4 className="text-lg font-bold mb-4 text-slate-800">安裝步驟</h4>
-            <p>1. 下單後檢查 Email 收取 QR Code。</p>
-            <p>2. 前往手機「設定」 「行動服務」 「加入 eSIM」。</p>
-            <p>3. 掃描 QR Code 並依照指示完成設定。</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ==========================================
-// 3. Tabelog 風格圖文評論與回覆系統
-// ==========================================
-const ReviewsSection = ({ productId }) => {
-  const [reviews, setReviews] = useState([]);
-  const [replies, setReplies] = useState({});
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-
-  const [name, setName] = useState("");
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [rating, setRating] = useState(5);
-  const [media, setMedia] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [replyName, setReplyName] = useState("");
-  const [replyContent, setReplyContent] = useState("");
-  const [isReplying, setIsReplying] = useState(false);
-
-  const [gallery, setGallery] = useState({
-    isOpen: false,
-    mediaUrls: [],
-    initialSlide: 0,
-  });
-  const isAdmin = currentUser?.email === ADMIN_EMAIL;
-
-  const fetchReviews = async () => {
-    const { data } = await supabase
-      .from("product_reviews")
-      .select("*")
-      .eq("product_id", productId)
-      .eq("status", "approved")
-      .order("created_at", { ascending: false });
-    if (data) {
-      const mainReviews = data.filter((r) => !r.parent_id);
-      const replyData = data.filter((r) => r.parent_id);
-      const replyMap = {};
-      replyData.forEach((r) => {
-        if (!replyMap[r.parent_id]) replyMap[r.parent_id] = [];
-        replyMap[r.parent_id].push(r);
-      });
-      setReviews(mainReviews);
-      setReplies(replyMap);
-    }
-  };
-
-  useEffect(() => {
-    if (productId) fetchReviews();
-    const checkRealAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user) {
-        setIsLoggedIn(true);
-        setCurrentUser(session.user);
-      }
-    };
-    checkRealAuth();
-  }, [productId]);
-
-  useEffect(() => {
-    return () => {
-      media.forEach((m) => URL.revokeObjectURL(m.previewUrl));
-    };
-  }, [media]);
-
-  const handleReviewClick = () => {
-    if (!isLoggedIn) {
-      const email = window.prompt(
-        "【測試模式】請輸入您的 Email 來模擬登入狀態：\n(輸入 bob112722761236tom@gmail.com 可測試管理員權限)",
-      );
-      if (email) {
-        setIsLoggedIn(true);
-        setCurrentUser({ email: email });
-      }
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const newFiles = Array.from(e.target.files);
-    const validNewFiles = [];
-    let hasError = false;
-
-    if (media.length + newFiles.length > 4) {
-      alert(
-        `⚠️ 最多只能上傳 4 個檔案喔！目前已選擇 ${media.length} 個，再新增 ${newFiles.length} 個會超過限制。`,
-      );
-      e.target.value = null;
-      return;
-    }
-
-    newFiles.forEach((file) => {
-      const isVideo = file.type.startsWith("video/");
-      const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        alert(
-          `⚠️ 檔案 ${file.name} 容量太大！\n\n- 圖片限制：單張 5MB 以內\n- 影片限制：單部 50MB 以內\n\n請壓縮後再上傳。`,
-        );
-        hasError = true;
-      } else {
-        validNewFiles.push({
-          file: file,
-          previewUrl: URL.createObjectURL(file),
-        });
-      }
-    });
-
-    if (!hasError && validNewFiles.length > 0)
-      setMedia((prevMedia) => [...prevMedia, ...validNewFiles]);
-    e.target.value = null;
-  };
-
-  const handleCancelFile = (indexToRemove) => {
-    setMedia((prevMedia) => {
-      URL.revokeObjectURL(prevMedia[indexToRemove].previewUrl);
-      return prevMedia.filter((_, index) => index !== indexToRemove);
-    });
-  };
-
-  const uploadMedia = async (files) => {
-    const urls = [];
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    for (const file of files) {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${productId}/${currentMonth}/${fileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("review-media")
-        .upload(filePath, file);
-      if (uploadError) {
-        console.error("Storage upload error:", uploadError);
-        alert(`⚠️ 檔案上傳失敗！\n錯誤訊息：${uploadError.message}`);
-        continue;
-      }
-      const { data } = supabase.storage
-        .from("review-media")
-        .getPublicUrl(filePath);
-      urls.push(data.publicUrl);
-    }
-    return urls;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!name || !content || !title) return alert("請填寫暱稱、標題與內容");
-    setIsSubmitting(true);
-
-    const filesToUpload = media.map((m) => m.file);
-    let mediaUrls = [];
-    if (filesToUpload.length > 0) mediaUrls = await uploadMedia(filesToUpload);
-
-    const { error } = await supabase.from("product_reviews").insert([
-      {
-        product_id: productId,
-        user_name: name,
-        title: title,
-        content: content,
-        rating: rating,
-        media_urls: mediaUrls,
-      },
-    ]);
-
-    setIsSubmitting(false);
-    if (error) {
-      console.error("Insert Review Error:", error);
-      alert(`留言失敗: ${error.message}`);
-    } else {
-      alert("感謝您的評價！");
-      setName("");
-      setTitle("");
-      setContent("");
-      setRating(5);
-      media.forEach((m) => URL.revokeObjectURL(m.previewUrl));
-      setMedia([]);
-      fetchReviews();
-    }
-  };
-
-  const handleReplySubmit = async (e, parentId) => {
-    e.preventDefault();
-    if (!replyName || !replyContent) return alert("請填寫暱稱與回覆內容");
-    setIsReplying(true);
-    const { error } = await supabase.from("product_reviews").insert([
-      {
-        product_id: productId,
-        parent_id: parentId,
-        user_name: replyName,
-        content: replyContent,
-        rating: 5,
-      },
-    ]);
-    setIsReplying(false);
-    if (error) {
-      console.error("Insert Reply Error:", error);
-      alert(`回覆失敗: ${error.message}`);
-    } else {
-      alert("回覆成功！");
-      setReplyingTo(null);
-      setReplyName("");
-      setReplyContent("");
-      fetchReviews();
-    }
-  };
-
-  const handleDelete = async (id, isReply = false, targetMediaUrls = []) => {
-    const confirmMsg = isReply
-      ? "確定要刪除這則回覆嗎？"
-      : "確定要刪除這則留言嗎？\n\n(注意：這將會同步刪除該留言夾帶的所有圖片與影片，並且底下所有的回覆也會一併被清空。)";
-    if (!window.confirm(confirmMsg)) return;
-
-    if (targetMediaUrls && targetMediaUrls.length > 0) {
-      try {
-        const filePaths = targetMediaUrls
-          .map((url) => {
-            const decodedUrl = decodeURI(url);
-            const parts = decodedUrl.split("/review-media/");
-            return parts.length > 1 ? parts[1] : null;
-          })
-          .filter(Boolean);
-
-        if (filePaths.length > 0) {
-          const { error: storageError } = await supabase.storage
-            .from("review-media")
-            .remove(filePaths);
-          if (storageError) {
-            alert(
-              `⚠️ 圖片刪除失敗：${storageError.message}\n(請確認 Supabase Storage 是否有開啟 DELETE 權限！刪除程序已中斷。)`,
-            );
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("解析圖片網址失敗", err);
-      }
-    }
-
-    const { error: dbError } = await supabase
-      .from("product_reviews")
-      .delete()
-      .eq("id", id);
-    if (dbError) alert(`刪除資料庫紀錄失敗: ${dbError.message}`);
-    else {
-      alert("刪除成功！");
-      fetchReviews();
-    }
-  };
-
-  const openGallery = (mediaUrls, index) => {
-    setGallery({ isOpen: true, mediaUrls, initialSlide: index });
-  };
-
-  return (
-    <div
-      id="product-reviews"
-      className="mt-16 max-w-[800px] mx-auto pt-10 pb-20 relative"
-    >
-      <AnimatePresence>
-        {gallery.isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setGallery({ ...gallery, isOpen: false })}
-            className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setGallery({ ...gallery, isOpen: false });
-              }}
-              className="absolute top-5 right-5 text-white text-4xl w-12 h-12 flex items-center justify-center z-[10000] hover:bg-white/20 rounded-full transition-colors cursor-pointer"
-            >
-              &times;
-            </button>
-            <div
-              className="w-full max-w-6xl px-12 h-[85vh] relative flex items-center justify-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Swiper
-                initialSlide={gallery.initialSlide}
-                navigation={true}
-                modules={[Navigation]}
-                className="w-full h-full lightbox-swiper"
-              >
-                {gallery.mediaUrls.map((url, i) => (
-                  <SwiperSlide
-                    key={i}
-                    className="flex items-center justify-center w-full h-full"
-                  >
-                    {url.match(VIDEO_REGEX) ? (
-                      <video
-                        src={url}
-                        controls
-                        autoPlay
-                        playsInline
-                        className="max-h-full max-w-full rounded-md shadow-2xl"
-                      />
-                    ) : (
-                      <img
-                        src={url}
-                        alt={`Gallery image ${i}`}
-                        className="max-h-full max-w-full object-contain rounded-md shadow-2xl"
-                      />
-                    )}
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            </div>
-            <style
-              dangerouslySetInnerHTML={{
-                __html: ` .lightbox-swiper .swiper-button-next, .lightbox-swiper .swiper-button-prev { color: white; background-color: rgba(255, 255, 255, 0.1); width: 50px; height: 50px; border-radius: 50%; backdrop-filter: blur(4px); transition: background-color 0.2s; } .lightbox-swiper .swiper-button-next:hover, .lightbox-swiper .swiper-button-prev:hover { background-color: rgba(255, 255, 255, 0.3); } `,
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
-        <h3 className="text-lg font-bold text-slate-800">
-          評論 ({reviews.length})
-        </h3>
-      </div>
-
-      <div className="space-y-6 mb-16">
-        {reviews.length === 0 ? (
-          <p className="text-slate-500 text-center py-10 bg-slate-50 rounded-sm">
-            目前還沒有評價，成為第一個分享體驗的人吧！
-          </p>
-        ) : (
-          reviews.map((r) => (
-            <div
-              key={r.id}
-              className="border border-gray-200 rounded-sm p-5 bg-white shadow-sm flex flex-col"
-            >
-              <div className="flex justify-between items-start mb-3 border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden shrink-0 border border-gray-300">
-                    <span className="text-gray-500 font-bold text-sm">
-                      {r.user_name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                      {r.user_name}
-                      {r.is_verified_purchase && (
-                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-sm font-bold">
-                          已購買
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 mb-2 mt-1">
-                <span className="inline-flex items-center gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <MaterialIcon
-                      key={i}
-                      name="star"
-                      size={18}
-                      filled={i < (r.rating || 5)}
-                      className={
-                        i < (r.rating || 5) ? "text-[#f56a00]" : "text-gray-300"
-                      }
-                    />
-                  ))}
-                </span>
-                <div className="text-red-600 font-bold text-xl">
-                  {(r.rating || 5).toFixed(1)}
-                </div>
-              </div>
-              <div className="text-xs text-slate-500 mb-4">
-                {new Date(r.created_at)
-                  .toLocaleDateString()
-                  .replace(/\//g, "/")}{" "}
-                訪問
-              </div>
-              <h4 className="font-bold text-base text-slate-900 mb-2 whitespace-pre-wrap leading-relaxed">
-                {r.title || "體驗分享"}
-              </h4>
-              <p className="text-slate-700 font-normal leading-relaxed text-sm mb-4">
-                {r.content}
-              </p>
-
-              {r.media_urls && r.media_urls.length > 0 && (
-                <div className="mt-2 mb-4">
-                  <button
-                    onClick={() => openGallery(r.media_urls, 0)}
-                    className="text-xs text-blue-600 font-bold mb-2 flex items-center gap-1 hover:underline cursor-pointer"
-                  >
-                    檢查更多
-                    <MaterialIcon name="expand_more" size={14} />
-                  </button>
-                  <div className="grid grid-cols-4 gap-2">
-                    {r.media_urls.slice(0, 4).map((url, i) => (
-                      <div
-                        key={i}
-                        onClick={() => openGallery(r.media_urls, i)}
-                        className="relative aspect-square rounded-sm overflow-hidden bg-gray-100 border border-gray-200 cursor-pointer group"
-                      >
-                        {url.match(VIDEO_REGEX) ? (
-                          <video
-                            src={url}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            muted
-                            playsInline
-                          />
-                        ) : (
-                          <img
-                            src={url}
-                            alt="Review media"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        )}
-                        {i === 3 && r.media_urls.length > 4 && (
-                          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white">
-                            <span className="font-bold text-sm">
-                              查看全部 {r.media_urls.length}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-auto">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() =>
-                      handleReviewClick() ||
-                      setReplyingTo(replyingTo === r.id ? null : r.id)
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <MaterialIcon
+                  name="tips_and_updates"
+                  size={24}
+                  className="text-[#2B59C3]"
+                />
+                使用介紹
+              </h3>
+              {adminChecked && isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!safeCarrier) {
+                      alert("請先選擇電信商，再編輯該電信商的使用介紹");
+                      return;
                     }
-                    className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
-                  >
-                    <MaterialIcon name="reply" size={14} />
-                    {replyingTo === r.id ? "取消回覆" : "回覆評論"}
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDelete(r.id, false, r.media_urls)}
-                      className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors"
-                    >
-                      <MaterialIcon name="delete" size={14} />
-                      刪除
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {replies[r.id] && replies[r.id].length > 0 && (
-                <div className="bg-slate-50 border-t border-gray-100 p-4 mt-3 rounded-sm space-y-4">
-                  {replies[r.id].map((reply) => (
-                    <div key={reply.id} className="text-sm">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-800">
-                            {reply.user_name}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            {new Date(reply.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleDelete(reply.id, true)}
-                            className="text-xs text-red-500 hover:text-red-700 transition-colors"
-                          >
-                            刪除
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-slate-700 pl-2 border-l-2 border-gray-300 ml-1">
-                        {reply.content}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {replyingTo === r.id && isLoggedIn && (
-                <form
-                  onSubmit={(e) => handleReplySubmit(e, r.id)}
-                  className="mt-3 bg-gray-50 border border-gray-200 p-4 rounded-lg flex flex-col gap-3"
+                    if (!isEditingUsage) {
+                      setUsageContent(
+                        normalizeCarrierHtml(
+                          resolveUsageContent(product, safeCarrier),
+                        ),
+                      );
+                    }
+                    setIsEditingDesc(false);
+                    setIsEditingFaq(false);
+                    setIsEditingUsage(!isEditingUsage);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded text-sm font-bold text-white transition-colors ${isEditingUsage ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
                 >
-                  <input
-                    type="text"
-                    placeholder="您的暱稱"
-                    value={replyName}
-                    onChange={(e) => setReplyName(e.target.value)}
-                    className="border border-gray-300 p-2 rounded-md text-sm w-full md:w-1/3 bg-white"
-                    required
-                  />
-                  <textarea
-                    placeholder="對這則評論有什麼想法呢？"
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    rows="2"
-                    className="border border-gray-300 p-2 rounded-md text-sm w-full bg-white"
-                    required
-                  ></textarea>
-                  <div className="flex justify-end">
-                    <button
-                      disabled={isReplying}
-                      className="bg-blue-600 text-white px-5 py-2 rounded-md text-xs font-bold disabled:opacity-50 hover:bg-blue-700 transition-colors"
-                    >
-                      {isReplying ? "送出中..." : "送出回覆"}
-                    </button>
-                  </div>
-                </form>
+                  {isEditingUsage ? (
+                    <>
+                      <MaterialIcon name="close" size={16} /> 取消編輯
+                    </>
+                  ) : (
+                    <>
+                      <MaterialIcon name="edit" size={16} /> 編輯內容
+                    </>
+                  )}
+                </button>
               )}
             </div>
-          ))
-        )}
-      </div>
 
-      <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm mt-10">
-        <div className="flex gap-4">
-          <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center shrink-0 border border-gray-300">
-            <span className="text-gray-500 font-bold text-lg">
-              {isLoggedIn ? "我" : "客"}
-            </span>
-          </div>
-          <div className="flex-1">
-            {!isLoggedIn ? (
-              <div
-                onClick={handleReviewClick}
-                className="w-full border border-gray-300 rounded-sm p-4 text-gray-500 text-sm cursor-pointer bg-slate-50 hover:bg-gray-100 transition-colors flex items-center"
-                style={{ minHeight: "60px" }}
-              >
-                點擊這裡寫下您的評價...
-              </div>
+            {isEditingUsage && isAdmin ? (
+              <CarrierHtmlEditor
+                carrier={safeCarrier}
+                content={usageContent}
+                onChange={setUsageContent}
+                editMode={usageEditMode}
+                onEditModeChange={setUsageEditMode}
+                isSaving={isSavingUsage}
+                sectionLabel="使用介紹"
+                preferHtmlMode
+                onSave={() =>
+                  saveCarrierContent({
+                    contentType: "usage",
+                    html: usageContent,
+                    setSaving: setIsSavingUsage,
+                    closeEditing: () => setIsEditingUsage(false),
+                    successLabel: "使用介紹",
+                  })
+                }
+              />
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-600 mb-1">
-                      暱稱
-                    </label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded-sm text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                      placeholder="您的名字"
-                      required
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-600 mb-1">
-                      評分
-                    </label>
-                    <select
-                      value={rating}
-                      onChange={(e) => setRating(Number(e.target.value))}
-                      className="w-full border border-gray-300 p-2 rounded-sm text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                    >
-                      <option value={5}>5 星 - 非常滿意</option>
-                      <option value={4}>4 星 - 滿意</option>
-                      <option value={3}>3 星 - 普通</option>
-                      <option value={2}>2 星 - 稍不滿意</option>
-                      <option value={1}>1 星 - 非常不滿意</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">
-                    評論標題
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full border border-gray-300 p-2 rounded-sm text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                    placeholder="用一句話總結您的體驗（必填）"
-                    required
+              <div className="mb-10 text-slate-600 text-sm leading-relaxed">
+                {sanitizedUsageHtml ? (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: sanitizedUsageHtml }}
+                    className="max-w-none product-content-wrapper"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">
-                    詳細內容
-                  </label>
-                  <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    rows="3"
-                    className="w-full border border-gray-300 p-2 rounded-sm text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                    placeholder="分享您在日本使用時的網速、訊號感受..."
-                    required
-                  ></textarea>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">
-                    上傳照片或影片{" "}
-                    <span className="text-gray-400 font-normal">
-                      (限 4 份檔案，圖片 5MB / 影片 50MB 內)
-                    </span>
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple
-                    onChange={handleFileChange}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-sm file:border file:border-gray-300 file:text-xs file:font-bold file:bg-white file:text-slate-700 hover:file:bg-gray-50 cursor-pointer"
-                  />
-                  {media.length > 0 && (
-                    <div className="w-full flex gap-3 mt-3 overflow-x-auto pb-2">
-                      {media.map((preview, i) => (
-                        <div
-                          key={i}
-                          className="relative w-20 h-20 shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200 shadow-sm"
-                        >
-                          {preview.file.type.startsWith("video/") ? (
-                            <video
-                              src={preview.previewUrl}
-                              className="w-full h-full object-cover"
-                              muted
-                              playsInline
-                            />
-                          ) : (
-                            <img
-                              src={preview.previewUrl}
-                              alt="Preview"
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleCancelFile(i)}
-                            className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 text-white rounded-full flex items-center justify-center font-bold text-xs hover:bg-red-700 transition-colors shadow-md"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-end mt-2 border-t border-gray-100 pt-4">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-[#f56a00] text-white px-8 py-2.5 rounded-sm text-sm font-bold hover:bg-[#d95a00] disabled:opacity-50 transition-colors shadow-sm"
-                  >
-                    {isSubmitting ? "上傳中..." : "發布評價"}
-                  </button>
-                </div>
-              </form>
+                ) : (
+                  safeCarrier && (
+                    <p className="text-sm text-slate-400">
+                      「{safeCarrier}」尚無使用介紹內容。
+                      {isAdmin ? " 點「編輯內容」新增。" : ""}
+                    </p>
+                  )
+                )}
+              </div>
             )}
-          </div>
-        </div>
+          </motion.div>
+        )}
+
+        {activeTab === "faq" && (
+          <motion.div
+            id="product-faq"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <div className="flex justify-between items-center mb-6">
+              {!faqHasSectionHead ? (
+                <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                  <MaterialIcon
+                    name="quiz"
+                    size={24}
+                    className="text-[#2B59C3]"
+                  />
+                  常見問題
+                </h3>
+              ) : (
+                <div />
+              )}
+              {adminChecked && isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!safeCarrier) {
+                      alert("請先選擇電信商，再編輯該電信商的常見問題");
+                      return;
+                    }
+                    if (!isEditingFaq) {
+                      setFaqContent(
+                        normalizeCarrierHtml(
+                          resolveFaqContent(product, safeCarrier),
+                        ),
+                      );
+                    }
+                    setIsEditingDesc(false);
+                    setIsEditingUsage(false);
+                    setIsEditingFaq(!isEditingFaq);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded text-sm font-bold text-white transition-colors ${isEditingFaq ? "bg-red-500 hover:bg-red-600" : "bg-slate-800 hover:bg-slate-700"}`}
+                >
+                  {isEditingFaq ? (
+                    <>
+                      <MaterialIcon name="close" size={16} /> 取消編輯
+                    </>
+                  ) : (
+                    <>
+                      <MaterialIcon name="edit" size={16} /> 編輯內容
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {isEditingFaq && isAdmin ? (
+              <CarrierHtmlEditor
+                carrier={safeCarrier}
+                content={faqContent}
+                onChange={setFaqContent}
+                editMode={faqEditMode}
+                onEditModeChange={setFaqEditMode}
+                isSaving={isSavingFaq}
+                sectionLabel="常見問題"
+                preferHtmlMode
+                onSave={() =>
+                  saveCarrierContent({
+                    contentType: "faq",
+                    html: faqContent,
+                    setSaving: setIsSavingFaq,
+                    closeEditing: () => setIsEditingFaq(false),
+                    successLabel: "常見問題",
+                  })
+                }
+              />
+            ) : (
+              <div className="mb-10 text-slate-600 text-sm leading-relaxed">
+                {sanitizedFaqHtml ? (
+                  <CarrierHtmlDisplay
+                    html={sanitizedFaqHtml}
+                    className="max-w-none product-content-wrapper"
+                    accordion
+                  />
+                ) : (
+                  safeCarrier && (
+                    <p className="text-sm text-slate-400">
+                      「{safeCarrier}」尚無常見問題內容。
+                      {isAdmin ? " 點「編輯內容」新增。" : ""}
+                    </p>
+                  )
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
 };
+
 
 // ==========================================
 // 🚀 4. Medusa API 資料抓取邏輯 (加上除錯日誌)
@@ -2060,6 +1725,8 @@ export async function getStaticProps({ params }) {
 
     const rawOverviewNotices = product.metadata?.overview_notices_by_carrier;
     const rawDetailedByCarrier = product.metadata?.detailed_content_by_carrier;
+    const rawUsageByCarrier = product.metadata?.usage_content_by_carrier;
+    const rawFaqByCarrier = product.metadata?.faq_content_by_carrier;
 
     const formattedProduct = {
       id: product.id,
@@ -2069,7 +1736,15 @@ export async function getStaticProps({ params }) {
       detailed_content: product.metadata?.detailed_content || "",
       detailed_content_by_carrier:
         parseDetailedContentByCarrier(rawDetailedByCarrier),
+      usage_content_by_carrier: parseUsageContentByCarrier(rawUsageByCarrier),
+      faq_content_by_carrier: parseFaqContentByCarrier(rawFaqByCarrier),
       key_features_by_carrier: parsedKeyFeatures,
+      carrier_specs_by_carrier:
+        parseCarrierSpecsByCarrier(product.metadata?.carrier_specs_by_carrier) ||
+        {},
+      hot_sale_telecoms: parseHotSaleTelecoms(
+        product.metadata?.hot_sale_telecoms,
+      ),
       overview_notices_by_carrier:
         parseOverviewNoticesByCarrier(rawOverviewNotices),
       image_url: resolveMedusaImageUrl(product.thumbnail),
@@ -2209,6 +1884,12 @@ export default function ProductPage({
           ...(data.key_features_by_carrier
             ? { key_features_by_carrier: data.key_features_by_carrier }
             : {}),
+          ...(data.carrier_specs_by_carrier
+            ? { carrier_specs_by_carrier: data.carrier_specs_by_carrier }
+            : {}),
+          ...(data.hot_sale_telecoms
+            ? { hot_sale_telecoms: data.hot_sale_telecoms }
+            : {}),
           ...(data.overview_notices_by_carrier
             ? {
                 overview_notices_by_carrier: data.overview_notices_by_carrier,
@@ -2218,6 +1899,12 @@ export default function ProductPage({
             ? {
                 detailed_content_by_carrier: data.detailed_content_by_carrier,
               }
+            : {}),
+          ...(data.usage_content_by_carrier
+            ? { usage_content_by_carrier: data.usage_content_by_carrier }
+            : {}),
+          ...(data.faq_content_by_carrier
+            ? { faq_content_by_carrier: data.faq_content_by_carrier }
             : {}),
           detailed_content: data.detailed_content || prev.detailed_content,
         }));
@@ -2354,7 +2041,12 @@ export default function ProductPage({
     CARRIER_INFO_MAP[carrierName] || CARRIER_INFO_MAP.default;
   const marketingConfig = activeCarrierInfo.marketingBox;
   const introBullets = resolveIntroBullets(product, carrierName);
+  const actualExperience = resolveActualExperience(product, carrierName);
   const overviewNotices = resolveOverviewNotices(product, carrierName);
+  const carrierSpecItems = useMemo(() => {
+    const specs = resolveCarrierSpecs(product, carrierName);
+    return buildCarrierSpecDisplayItems(specs);
+  }, [product, carrierName]);
 
   const priceSavings = useMemo(() => {
     if (
@@ -2409,21 +2101,15 @@ export default function ProductPage({
   const canPurchase =
     isAllOptionsSelected && currentVariation && currentVariation.price > 0;
 
-  const images = useMemo(() => {
-    const imgList = [];
-    const thumb = resolveMedusaImageUrl(product?.image_url);
-    if (thumb) imgList.push({ src: thumb, alt: product?.name });
-    const extras = resolveMedusaImageUrls(product?.image_urls || []);
-    extras.forEach((url) => {
-      if (url && url !== thumb) imgList.push({ src: url, alt: product?.name });
-    });
-    if (imgList.length === 0)
-      imgList.push({
-        src: "/default-image.jpg",
-        alt: product?.name || "Product Image",
-      });
-    return imgList;
-  }, [product]);
+  const images = useMemo(
+    () =>
+      buildProductMediaList({
+        thumbnail: product?.image_url,
+        imageUrls: product?.image_urls || [],
+        name: product?.name,
+      }),
+    [product],
+  );
 
   const openGalleryLightbox = useCallback((index) => {
     setGalleryLightboxIndex(index ?? 0);
@@ -2545,23 +2231,37 @@ export default function ProductPage({
                   onSlideChange={(swiper) => setActiveSlide(swiper.realIndex)}
                   className="w-full product-main-swiper aspect-[4/5] sm:aspect-[3/4] max-h-[min(75vh,600px)]"
                 >
-                  {images.map((img, idx) => (
+                  {images.map((item, idx) => (
                     <SwiperSlide key={idx}>
                       <button
                         type="button"
-                        onClick={() => openGalleryLightbox(idx)}
-                        className="relative block w-full h-full min-h-[340px] sm:min-h-[440px] cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00befa] focus-visible:ring-offset-2"
-                        aria-label={`放大檢視第 ${idx + 1} 張圖片`}
+                        onClick={() =>
+                          item.type === "image" && openGalleryLightbox(idx)
+                        }
+                        className={`relative block w-full h-full min-h-[340px] sm:min-h-[440px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00befa] focus-visible:ring-offset-2 ${
+                          item.type === "image" ? "cursor-zoom-in" : "cursor-default"
+                        }`}
+                        aria-label={
+                          item.type === "video"
+                            ? `播放第 ${idx + 1} 部影片`
+                            : `放大檢視第 ${idx + 1} 張圖片`
+                        }
                       >
-                        <Image
-                          src={img.src}
-                          alt={img.alt || "product"}
-                          fill
-                          sizes="(max-width: 1024px) 100vw, 55vw"
-                          className="object-contain pointer-events-none"
-                          priority={idx === 0}
-                          unoptimized={isMedusaStaticImage(img.src)}
-                        />
+                        {item.type === "video" ? (
+                          <div className="relative w-full h-full min-h-[340px] sm:min-h-[440px] bg-black flex items-center justify-center">
+                            <ProductMediaSlide
+                              item={item}
+                              className="w-full h-full max-h-[min(75vh,600px)] object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <ProductMediaSlide
+                            item={item}
+                            fill
+                            className="object-contain pointer-events-none"
+                            priority={idx === 0}
+                          />
+                        )}
                       </button>
                     </SwiperSlide>
                   ))}
@@ -2571,7 +2271,7 @@ export default function ProductPage({
               {/* 縮圖列（單行） */}
               {images.length > 1 && (
                 <div className="mt-4 flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
-                  {images.map((img, idx) => (
+                  {images.map((item, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -2581,17 +2281,27 @@ export default function ProductPage({
                           ? "border-[#00befa]"
                           : "border-gray-200 hover:border-gray-400"
                       }`}
-                      aria-label={`第 ${idx + 1} 張縮圖`}
+                      aria-label={`第 ${idx + 1} 個媒體`}
                       aria-current={activeSlide === idx ? "true" : undefined}
                     >
-                      <Image
-                        src={img.src}
-                        alt=""
-                        fill
-                        sizes="80px"
-                        className="object-cover bg-white"
-                        unoptimized={isMedusaStaticImage(img.src)}
-                      />
+                      {item.type === "video" ? (
+                        <div className="absolute inset-0 bg-slate-900 flex items-center justify-center">
+                          <MaterialIcon
+                            name="play_circle"
+                            size={28}
+                            className="text-white"
+                          />
+                        </div>
+                      ) : (
+                        <Image
+                          src={item.src}
+                          alt=""
+                          fill
+                          sizes="80px"
+                          className="object-cover bg-white"
+                          unoptimized={isMedusaStaticImage(item.src)}
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -2648,6 +2358,11 @@ export default function ProductPage({
                 <ProductOverviewNotices
                   notices={overviewNotices}
                   carrierFallback={marketingConfig}
+                  product={product}
+                  carrier={carrierName}
+                  onProductUpdate={(patch) =>
+                    setProduct((prev) => ({ ...prev, ...patch }))
+                  }
                 />
               )}
             </div>
@@ -2777,34 +2492,37 @@ export default function ProductPage({
                 </button>
                 <AnimatePresence initial={false}>
                   {featuresOpen && (
-                    <motion.ul
+                    <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="space-y-2.5 text-sm text-slate-600 leading-relaxed overflow-hidden"
+                      className="overflow-hidden"
                     >
-                      {introBullets.length > 0 ? (
-                        introBullets.map((line, i) => (
-                          <li
-                            key={i}
-                            className="flex gap-2 items-start list-none"
-                          >
-                            <span className="text-[#00befa] shrink-0 mt-0.5">
-                              •
-                            </span>
-                            <FeatureBulletText className="flex-1 min-w-0">
-                              {line}
-                            </FeatureBulletText>
+                      <ul className="space-y-2.5 text-sm text-slate-600 leading-relaxed">
+                        {introBullets.length > 0 ? (
+                          introBullets.map((line, i) => (
+                            <li
+                              key={i}
+                              className="flex gap-2 items-start list-none"
+                            >
+                              <span className="text-[#00befa] shrink-0 mt-0.5">
+                                •
+                              </span>
+                              <FeatureBulletText className="flex-1 min-w-0">
+                                {line}
+                              </FeatureBulletText>
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-gray-400 text-sm list-none">
+                            {carrierName && carrierName !== "default"
+                              ? "此電信商尚未設定重點特色。"
+                              : "請先選擇電信商以查看重點特色。"}
                           </li>
-                        ))
-                      ) : (
-                        <li className="text-gray-400 text-sm list-none">
-                          {carrierName && carrierName !== "default"
-                            ? "此電信商尚未設定重點特色。"
-                            : "請先選擇電信商以查看重點特色。"}
-                        </li>
-                      )}
-                    </motion.ul>
+                        )}
+                      </ul>
+                      <ProductActualExperience text={actualExperience} />
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </div>
@@ -2826,14 +2544,24 @@ export default function ProductPage({
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {availableCarriers.map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => handleAttributeSelect("telecom", opt)}
-                        className={`px-4 py-3 text-sm rounded-xl transition-all text-left ${variantBtnClass(selectedAttributes["telecom"] === opt)}`}
-                      >
-                        {opt}
-                      </button>
+                      <div key={opt} className="relative">
+                        {isHotSaleTelecom(product.hot_sale_telecoms, opt) ? (
+                          <Image
+                            src="/images/hot-sale.png"
+                            alt="熱銷推薦"
+                            width={56}
+                            height={56}
+                            className="absolute -top-3 right-3 z-10 w-14 h-auto pointer-events-none drop-shadow-sm"
+                          />
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => handleAttributeSelect("telecom", opt)}
+                          className={`w-full px-4 py-3 text-sm rounded-xl transition-all text-left ${variantBtnClass(selectedAttributes["telecom"] === opt)}`}
+                        >
+                          {opt}
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -2844,7 +2572,44 @@ export default function ProductPage({
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-3">
                     天數
                   </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+
+                  {/* 手機版：Apple 風格下拉 */}
+                  <div className="relative sm:hidden">
+                    <select
+                      id="product-days-select-mobile"
+                      value={String(selectedAttributes["days"] ?? "")}
+                      onChange={(e) =>
+                        handleAttributeSelect("days", e.target.value)
+                      }
+                      className={`w-full h-[50px] pl-4 pr-12 text-[17px] font-medium tracking-[-0.01em] rounded-[14px] appearance-none cursor-pointer transition-all duration-200 ease-out active:scale-[0.985] focus:outline-none ${
+                        selectedAttributes["days"]
+                          ? "bg-white text-slate-900 border border-[#007aff]/30 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_0_0_3px_rgba(0,122,255,0.12)]"
+                          : "bg-[#f2f2f7] text-slate-500 border border-black/[0.06] shadow-[inset_0_0.5px_0_rgba(0,0,0,0.06)] focus:bg-white focus:border-[#007aff]/40 focus:shadow-[0_0_0_3px_rgba(0,122,255,0.18)]"
+                      }`}
+                      style={{ WebkitTapHighlightColor: "transparent" }}
+                    >
+                      <option value="" disabled>
+                        請選擇天數
+                      </option>
+                      {availableDays.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt} 天
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/[0.05]">
+                        <MaterialIcon
+                          name="expand_more"
+                          size={20}
+                          className="text-slate-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 電腦版：原本按鈕網格 */}
+                  <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {availableDays.map((opt) => (
                       <button
                         key={opt}
@@ -2895,68 +2660,40 @@ export default function ProductPage({
               )}
 
               <AnimatePresence mode="wait">
-                {currentVariation && (
+                {currentVariation && carrierSpecItems.length > 0 && (
                   <motion.div
-                    key={currentVariation.id}
+                    key={`${currentVariation.id}-${carrierName}`}
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
                     className="my-5 p-4 rounded-xl grid grid-cols-2 gap-y-3 gap-x-4 text-sm bg-slate-50 border border-gray-100"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <MaterialIcon
-                        name="public"
-                        size={20}
-                        className="text-slate-500"
-                      />
-                      <span className="font-semibold text-slate-700">
-                        {currentVariation.attributes?.ip_type || "日本 IP"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <MaterialIcon
-                        name="diamond"
-                        size={20}
-                        className="text-slate-500"
-                      />
-                      <span className="font-semibold text-slate-700">
-                        {currentVariation.attributes?.route_type || "日本原生"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <MaterialIcon
-                        name="signal_cellular_alt"
-                        size={20}
-                        className="text-slate-500"
-                      />
-                      <span className="font-semibold text-slate-700">
-                        {currentVariation.attributes?.network || "4G / LTE"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <MaterialIcon
-                        name="bolt"
-                        size={20}
-                        className="text-slate-500"
-                      />
-                      <span className="font-semibold text-slate-700">
-                        {currentVariation.attributes?.speed_rule ||
-                          "依 FUP 規範限制"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2.5 col-span-2 pt-3 border-t border-gray-100">
-                      <MaterialIcon
-                        name="check_circle"
-                        size={20}
-                        className="text-emerald-600 shrink-0"
-                      />
-                      <span className="font-semibold text-slate-600 text-xs leading-relaxed">
-                        支援：{" "}
-                        {currentVariation.attributes?.apps ||
-                          "Google, IG, FB, Line, 熱點分享"}
-                      </span>
-                    </div>
+                    {carrierSpecItems.map((item) => (
+                      <div
+                        key={item.key}
+                        className={`flex items-center gap-2.5 ${
+                          item.fullWidth
+                            ? "col-span-2 pt-3 border-t border-gray-100"
+                            : ""
+                        }`}
+                      >
+                        <MaterialIcon
+                          name={item.icon}
+                          size={20}
+                          className={
+                            item.iconClass || "text-slate-500 shrink-0"
+                          }
+                        />
+                        <span
+                          className={`font-semibold text-slate-700 ${
+                            item.fullWidth ? "text-xs leading-relaxed" : ""
+                          }`}
+                        >
+                          {item.text}
+                        </span>
+                      </div>
+                    ))}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -3106,7 +2843,7 @@ export default function ProductPage({
               setProduct((prev) => ({ ...prev, ...patch }))
             }
           />
-          <ReviewsSection productId={product.id} />
+          <ProductReviewsSection productId={product.id} />
         </div>
       </div>
     </Layout>

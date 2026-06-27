@@ -2,34 +2,11 @@
 
 import { parseOverviewNoticesByCarrier } from "../../../lib/productOverviewNotices";
 import { parseDetailedContentByCarrier } from "../../../lib/productDetailedContent";
-
-function parseKeyFeaturesByCarrier(raw) {
-  if (!raw) return {};
-  if (typeof raw === "object" && !Array.isArray(raw)) {
-    return Object.fromEntries(
-      Object.entries(raw).map(([k, v]) => [
-        k,
-        Array.isArray(v) ? v.map(String).filter(Boolean) : [],
-      ]),
-    );
-  }
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return Object.fromEntries(
-          Object.entries(parsed).map(([k, v]) => [
-            k,
-            Array.isArray(v) ? v.map(String).filter(Boolean) : [],
-          ]),
-        );
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  return {};
-}
+import { parseKeyFeaturesByCarrier } from "../../../lib/productKeyFeatures";
+import { parseCarrierSpecsByCarrier } from "../../../lib/productCarrierSpecs";
+import { parseHotSaleTelecoms } from "../../../lib/productHotSale";
+import { parseUsageContentByCarrier } from "../../../lib/productUsageContent";
+import { parseFaqContentByCarrier } from "../../../lib/productFaqContent";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -74,9 +51,13 @@ export default async function handler(req, res) {
       "public, s-maxage=30, stale-while-revalidate=60",
     );
     return res.status(200).json({
-      key_features_by_carrier: parseKeyFeaturesByCarrier(
-        product.metadata?.key_features_by_carrier,
-      ),
+      key_features_by_carrier:
+        parseKeyFeaturesByCarrier(product.metadata?.key_features_by_carrier) ||
+        {},
+      carrier_specs_by_carrier:
+        parseCarrierSpecsByCarrier(
+          product.metadata?.carrier_specs_by_carrier,
+        ) || {},
       overview_notices_by_carrier: parseOverviewNoticesByCarrier(
         product.metadata?.overview_notices_by_carrier,
       ),
@@ -84,6 +65,15 @@ export default async function handler(req, res) {
         product.metadata?.detailed_content_by_carrier,
       ),
       detailed_content: product.metadata?.detailed_content || "",
+      hot_sale_telecoms: parseHotSaleTelecoms(
+        product.metadata?.hot_sale_telecoms,
+      ),
+      usage_content_by_carrier: parseUsageContentByCarrier(
+        product.metadata?.usage_content_by_carrier,
+      ),
+      faq_content_by_carrier: parseFaqContentByCarrier(
+        product.metadata?.faq_content_by_carrier,
+      ),
     });
   } catch (error) {
     console.error("[product-features]", error);

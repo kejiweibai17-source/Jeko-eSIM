@@ -144,6 +144,7 @@ const slides = [
     image: "/images/Hero-banner-01.png",
     imageMobile: "/images/hero-banner-mobile.png",
   },
+  { image: "/images/banner33.png" },
   { image: "/images/優惠banner04.png" },
 
   { image: "/images/location/fcc7e825-9136-4c9d-8312-3309fe189b4c.png" },
@@ -397,7 +398,7 @@ export default function Slider() {
     <>
       <style>{`
         .hero-wrap { position: relative; width: 100%; z-index: 30; isolation: isolate; background: #fff; }
-        .hero-container { position: relative; width: 100%; height: 90vh; height: 90svh; min-height: 480px; overflow: hidden; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #fff; z-index: 0; }
+        .hero-container { position: relative; width: 100%; height: 95vh; height: 95svh; min-height: 480px; overflow: hidden; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #fff; z-index: 0; }
         .images-wrapper { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
         .slide-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; will-change: transform, opacity; z-index: 0; overflow: hidden; }
         .slide-image img { width: 100%; height: 100%; object-fit: cover; object-position: center 55%; display: block; }
@@ -410,7 +411,7 @@ export default function Slider() {
         .hero-slide-dots { position: absolute; left: clamp(1.25rem, 4vw, 3rem); bottom: clamp(7rem, 14vw, 10rem); z-index: 20; display: flex; align-items: center; gap-2; }
         .top-right-badge { position: absolute; top: 2.5rem; right: 0; z-index: 20; background-color: #2b65f6; padding: 0.6rem 1.5rem; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; }
         @media (max-width: 768px) {
-          .hero-container { height: 90vh; height: 90svh; min-height: 420px; }
+          .hero-container { height: 95vh; height: 95svh; min-height: 420px; }
           .hero-headline { top: 14%; }
           .hero-slide-dots { bottom: clamp(5rem, 12vw, 8rem); }
           .top-right-badge { top: 1.5rem; padding: 0.4rem 1rem; }

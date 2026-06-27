@@ -1,19 +1,8 @@
-import DOMPurify from "isomorphic-dompurify";
 import { requireAdmin } from "../../../lib/adminAuth";
 import {
-  DETAILED_CONTENT_METADATA_KEY,
-  parseDetailedContentByCarrier,
-} from "../../../lib/productDetailedContent";
-import {
-  USAGE_CONTENT_METADATA_KEY,
-  parseUsageContentByCarrier,
-} from "../../../lib/productUsageContent";
-import {
-  FAQ_CONTENT_METADATA_KEY,
-  parseFaqContentByCarrier,
-} from "../../../lib/productFaqContent";
-import { normalizeCarrierHtml } from "../../../lib/normalizeCarrierHtml";
-import { CARRIER_HTML_SANITIZE } from "../../../lib/carrierHtmlSanitize";
+  OVERVIEW_NOTICES_METADATA_KEY,
+  parseOverviewNoticesByCarrier,
+} from "../../../lib/productOverviewNotices";
 
 const MEDUSA_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
@@ -21,35 +10,9 @@ const INTERNAL_SECRET = process.env.PRODUCT_CONTENT_ADMIN_SECRET || "";
 const PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || "";
 
-function sanitizeProductHtml(html) {
-  return DOMPurify.sanitize(
-    normalizeCarrierHtml(String(html || "")),
-    CARRIER_HTML_SANITIZE,
-  );
-}
-
-function resolveContentMeta(contentType) {
-  if (contentType === "usage") {
-    return {
-      metadataKey: USAGE_CONTENT_METADATA_KEY,
-      parseMap: parseUsageContentByCarrier,
-    };
-  }
-  if (contentType === "faq") {
-    return {
-      metadataKey: FAQ_CONTENT_METADATA_KEY,
-      parseMap: parseFaqContentByCarrier,
-    };
-  }
-  return {
-    metadataKey: DETAILED_CONTENT_METADATA_KEY,
-    parseMap: parseDetailedContentByCarrier,
-  };
-}
-
 /**
- * POST /api/admin/product-detailed-content
- * body: { productId, carrier, html, contentType?: 'detailed' | 'usage' | 'faq' }
+ * POST /api/admin/product-overview-notices
+ * body: { productId, carrier, fup_notice?, activation_notice? }
  */
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -71,12 +34,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const { productId, carrier, html, contentType: rawContentType } = req.body ?? {};
-  const contentType =
-    rawContentType === "usage" || rawContentType === "faq"
-      ? rawContentType
-      : "detailed";
-  const { metadataKey, parseMap } = resolveContentMeta(contentType);
+  const { productId, carrier, fup_notice, activation_notice } = req.body ?? {};
 
   if (!productId || typeof productId !== "string") {
     return res.status(400).json({ error: "缺少 productId" });
@@ -86,7 +44,6 @@ export default async function handler(req, res) {
   }
 
   const carrierKey = carrier.trim();
-  const sanitized = sanitizeProductHtml(html);
 
   try {
     const upstream = await fetch(
@@ -101,8 +58,9 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           productId,
           carrier: carrierKey,
-          html: sanitized,
-          contentType,
+          contentType: "overview",
+          fup_notice: String(fup_notice ?? "").trim(),
+          activation_notice: String(activation_notice ?? "").trim(),
           updatedBy: admin.email,
         }),
       },
@@ -116,14 +74,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const contentMap = parseMap(data[metadataKey]);
+    const overviewMap = parseOverviewNoticesByCarrier(
+      data[OVERVIEW_NOTICES_METADATA_KEY],
+    );
 
     return res.status(200).json({
       success: true,
       carrier: carrierKey,
-      contentType,
-      html: contentMap[carrierKey] || sanitized,
-      [metadataKey]: contentMap,
+      overview_notices_by_carrier: overviewMap,
     });
   } catch (e) {
     return res.status(500).json({

@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import LineProvider from "next-auth/providers/line";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
@@ -45,7 +45,7 @@ function isDuplicateUserError(message = "") {
   );
 }
 
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     LineProvider({
       clientId: process.env.LINE_CLIENT_ID as string,
@@ -165,4 +165,6 @@ export default NextAuth({
     error: "/login",
   },
   debug: true,
-});
+};
+
+export default NextAuth(authOptions);

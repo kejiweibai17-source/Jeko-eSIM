@@ -40,13 +40,24 @@ export default function RefundPolicyPage() {
         <p className="font-bold text-slate-800">未開通退款流程：</p>
         <ol className="list-decimal pl-5 space-y-2">
           <li>
-            登入{" "}
+            <strong>會員：</strong>登入{" "}
             <Link href="/account" className="text-sky-600 font-bold hover:underline">
               會員中心 → 我的 eSIM（訂單）
             </Link>
-            ，點選訂單「申請退款」線上填寫；或來信{" "}
-            <a href="mailto:support@re-media.com">support@re-media.com</a>、透過{" "}
-            <Link href="/contact">聯絡我們</Link>／LINE 官方帳號，提供<strong>訂單編號</strong>與
+            ，點選訂單「申請退款」線上填寫。
+            <br />
+            <strong>非會員：</strong>請先{" "}
+            <a
+              href="https://line.me/R/ti/p/@391huuts"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-600 font-bold hover:underline"
+            >
+              加入官方 LINE
+            </a>
+            後提交審核申請；亦可來信{" "}
+            <a href="mailto:support@re-media.com">support@re-media.com</a> 或透過{" "}
+            <Link href="/contact">聯絡我們</Link>，提供<strong>訂單編號</strong>與
             <strong>購買 Email</strong>。
           </li>
           <li>客服向 API 供應商查詢 eSIM 狀態（未開通／未使用）。</li>
@@ -80,11 +91,22 @@ export default function RefundPolicyPage() {
         <p className="font-bold text-slate-800">已開通爭議處理流程：</p>
         <ol className="list-decimal pl-5 space-y-2">
           <li>
-            購買後 30 日內於{" "}
+            <strong>會員：</strong>購買後 30 日內於{" "}
             <Link href="/account" className="text-sky-600 font-bold hover:underline">
               會員中心
             </Link>
-            提交「售後／爭議處理」表單（含手機型號、問題說明與 1～3 張截圖），或來信客服提供相同資料。
+            提交「售後／爭議處理」表單（含手機型號、問題說明與 1～3 張截圖）。
+            <br />
+            <strong>非會員：</strong>請先{" "}
+            <a
+              href="https://line.me/R/ti/p/@391huuts"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-600 font-bold hover:underline"
+            >
+              加入官方 LINE
+            </a>
+            後提交審核申請，或來信客服提供相同資料。
           </li>
           <li>客服協助基本排查（APN、數據漫遊、重新下載 Profile 等）。</li>
           <li>若仍無法使用，提交 API 供應商查驗啟用紀錄、流量與基站連線狀態。</li>
@@ -129,6 +151,18 @@ export default function RefundPolicyPage() {
       <LegalSection title="七、聯絡方式">
         <p>退換貨申請請備妥訂單編號，透過以下方式聯繫：</p>
         <ul>
+          <li>
+            <strong>非會員：</strong>請先{" "}
+            <a
+              href="https://line.me/R/ti/p/@391huuts"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-600 font-bold hover:underline"
+            >
+              加入官方 LINE
+            </a>
+            後提交退款或售後審核申請。
+          </li>
           <li>
             Email：<a href="mailto:support@re-media.com">support@re-media.com</a>
           </li>

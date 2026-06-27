@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Layout from "../../Layout.js";
 import { buildCategorySeo } from "../../../lib/seo.config";
 import { resolveMedusaImageUrl } from "../../../lib/resolveMedusaImageUrl";
+import { sortCategoriesByRank } from "../../../lib/sortCategoriesByRank";
 import CountryFilter from "../../../components/NavbarTestSideBarToggle.jsx";
 import SwiperCarousel from "../../../components/SwiperCarousel/SwiperCard.jsx";
 import FilterSideBar from "../../../components/FilterSideBar";
@@ -115,13 +116,13 @@ export async function getStaticProps({ params }) {
       description: currentCategory.description || "",
     };
 
-    const formattedAllCategories = (allCatData.product_categories || []).map(
-      (cat) => ({
-        id: cat.id,
-        name: cat.name,
-        slug: cat.handle,
-      }),
-    );
+    const formattedAllCategories = sortCategoriesByRank(
+      allCatData.product_categories || [],
+    ).map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.handle,
+    }));
 
     const formattedProducts = (prodData.products || []).map((p) => {
       const firstVariant = p.variants?.[0];

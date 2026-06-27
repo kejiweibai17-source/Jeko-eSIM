@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import MaterialIcon from "@/components/MaterialIcon";
 
+const LINE_OA_URL = "https://line.me/R/ti/p/@391huuts";
+
 const SUMMARY_ITEMS = [
   {
     title: "掃描 QR Code 即視為開通",
@@ -60,10 +62,27 @@ export default function EsimRefundDisclosure({ defaultOpen = false }) {
 
           <p className="text-xs text-slate-400 leading-relaxed">
             例外：重複扣款、錯誤出貨、經查證之系統或供應商故障等，依
-            <Link href="/refund-policy" target="_blank" className="text-slate-600 underline hover:text-slate-800 mx-0.5">
+            <Link
+              href="/refund-policy"
+              target="_blank"
+              className="text-slate-600 underline hover:text-slate-800 mx-0.5"
+            >
               退換貨政策
             </Link>
             個案審核。
+          </p>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            若您尚未加入會員，請先
+            <a
+              href={LINE_OA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-600 underline hover:text-slate-800 mx-0.5"
+            >
+              加入官方 LINE
+            </a>
+            後提交退款或售後審核申請。
           </p>
         </div>
       )}
