@@ -491,19 +491,19 @@ export default function Navbar({ className }: NavbarProps) {
                         </p>
                         <Link
                           href="/news"
-                          className="font-bold text-gray-700 hover:text-[#0A6CD0]"
+                          className="font-bold text-stone-900 hover:text-[#0A6CD0]"
                         >
                           最新優惠活動
                         </Link>
                         <Link
                           href="/coverage"
-                          className="font-bold text-gray-700 hover:text-[#0A6CD0]"
+                          className="font-bold text-stone-900 hover:text-[#0A6CD0]"
                         >
                           全球訊號覆蓋範圍
                         </Link>
                         <Link
                           href="/support"
-                          className="font-bold text-gray-700 hover:text-[#0A6CD0]"
+                          className="font-bold text-stone-900 hover:text-[#0A6CD0]"
                         >
                           幫助中心
                         </Link>
@@ -671,7 +671,9 @@ export default function Navbar({ className }: NavbarProps) {
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-2 mb-1">
                   追蹤我們
                 </p>
-                <SocialIconLinksMobile onNavigate={() => setMobileOpen(false)} />
+                <SocialIconLinksMobile
+                  onNavigate={() => setMobileOpen(false)}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 pt-2 border-t border-slate-100">

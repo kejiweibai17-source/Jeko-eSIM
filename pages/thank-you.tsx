@@ -50,7 +50,7 @@ export default function ThankYouPage() {
         localStorage.setItem("lastOrderNo", fromUrl);
         localStorage.setItem(
           "lastOrderNoPayload",
-          JSON.stringify({ orderNo: fromUrl, ts: Date.now() })
+          JSON.stringify({ orderNo: fromUrl, ts: Date.now() }),
         );
       } catch {}
       return fromUrl;
@@ -83,7 +83,7 @@ export default function ThankYouPage() {
   const pendingHref = useMemo(
     () =>
       orderNo ? `/pending?orderNo=${encodeURIComponent(orderNo)}` : "/account",
-    [orderNo]
+    [orderNo],
   );
 
   const clearedOnceRef = useRef(false);
@@ -272,7 +272,7 @@ export default function ThankYouPage() {
           )}
 
           {!["VACC", "WEBATM", "CVS"].includes(
-            String(offsiteInfo?.PaymentType || "")
+            String(offsiteInfo?.PaymentType || ""),
           ) && (
             <div className="space-y-2">
               <p>付款方式：{offsiteInfo?.PaymentType || "—"}</p>
@@ -342,7 +342,7 @@ export default function ThankYouPage() {
         )}
 
         {!loading && qrcodes.length === 0 && !isPaid(orderInfo?.status) && (
-          <div className="text-gray-700">
+          <div className="text-stone-900">
             目前尚未取得 QRCode。若您剛完成付款，請稍候片刻或
             <a href={pendingHref} className="underline ml-1">
               前往訂單追蹤

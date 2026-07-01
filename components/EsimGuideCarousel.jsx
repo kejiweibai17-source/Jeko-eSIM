@@ -242,7 +242,7 @@ export default function EsimGuideCarousel() {
                 illustration={
                   <div className="relative flex items-center justify-center w-full h-full">
                     <Smartphone
-                      className="w-24 h-24 text-gray-700"
+                      className="w-24 h-24 text-stone-900"
                       strokeWidth={1.5}
                     />
                     <div className="absolute -right-2 top-4 bg-white shadow-md rounded-lg px-3 py-1 flex items-center gap-2 border border-gray-100">
@@ -318,7 +318,7 @@ export default function EsimGuideCarousel() {
                     </div>
                     <div className="h-1 w-1 bg-gray-300 rounded-full"></div>
                     <div className="h-1 w-1 bg-gray-300 rounded-full"></div>
-                    <Smartphone className="w-12 h-12 text-gray-700" />
+                    <Smartphone className="w-12 h-12 text-stone-900" />
                   </div>
                 </div>
               }

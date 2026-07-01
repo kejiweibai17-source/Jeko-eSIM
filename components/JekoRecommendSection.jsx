@@ -6,6 +6,7 @@ import MobileCardCarousel from "./MobileCardCarousel";
 const RECOMMEND_SLIDES = [
   "/images/九州01.png",
   "/images/中國.png",
+  "/images/優惠banner04.png",
   "/images/韓國01.png",
   "/images/九州01.png",
   "/images/中國.png",

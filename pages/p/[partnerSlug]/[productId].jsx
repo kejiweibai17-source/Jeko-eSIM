@@ -346,7 +346,7 @@ export default function PartnerProductDetail({
                   <button
                     onClick={handleApplyCoupon}
                     disabled={isVerifyingCoupon || !couponCode}
-                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-300 transition-colors"
+                    className="bg-gray-200 text-stone-900 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-300 transition-colors"
                   >
                     {isVerifyingCoupon ? "..." : "套用"}
                   </button>

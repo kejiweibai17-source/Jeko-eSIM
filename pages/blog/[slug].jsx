@@ -21,6 +21,9 @@ import {
   useReviewUpload,
   useReviews,
 } from "../../hooks/useReviews";
+import MediaGalleryLightbox, {
+  toGalleryMediaItems,
+} from "../../components/MediaGalleryLightbox";
 
 /** WordPress 表格：補 class、避免 inline 隱藏 */
 function prepareWpContentHtml(html) {
@@ -107,6 +110,65 @@ const SIDEBAR_CATEGORIES = [
   },
 ];
 
+function ReviewMediaThumbnails({
+  media,
+  onItemClick,
+  thumbClassName = "w-28 h-28",
+  wrapperClassName = "",
+}) {
+  if (!media?.length) return null;
+
+  return (
+    <div className={`flex flex-wrap gap-3 ${wrapperClassName}`}>
+      {media.map((m, idx) => (
+        <button
+          key={m.id || `${m.public_url}-${idx}`}
+          type="button"
+          onClick={() => onItemClick(idx)}
+          className={`relative group ${thumbClassName} border border-[#e5e5e5] overflow-hidden rounded-[4px] bg-[#f5f5f5] cursor-pointer hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1f57b8]`}
+          aria-label={
+            m.media_type === "video"
+              ? `播放影片：${m.file_name || idx + 1}`
+              : `檢視圖片：${m.file_name || idx + 1}`
+          }
+        >
+          {m.media_type === "image" ? (
+            <img
+              src={m.public_url}
+              alt={m.file_name || ""}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <>
+              <video
+                src={m.public_url}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+                preload="metadata"
+              />
+              <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="white"
+                  aria-hidden="true"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1 rounded">
+                影片
+              </span>
+            </>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function PostPage({ post, relatedPosts = [] }) {
   const router = useRouter();
   const { user, session } = useUser();
@@ -134,6 +196,23 @@ export default function PostPage({ post, relatedPosts = [] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [openCategory, setOpenCategory] = useState("airport");
+  const [reviewMediaGallery, setReviewMediaGallery] = useState({
+    isOpen: false,
+    items: [],
+    initialIndex: 0,
+    title: "",
+  });
+
+  const openReviewMediaGallery = (mediaList, index, galleryTitle) => {
+    const items = toGalleryMediaItems(mediaList);
+    if (!items.length) return;
+    setReviewMediaGallery({
+      isOpen: true,
+      items,
+      initialIndex: index,
+      title: galleryTitle,
+    });
+  };
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -539,33 +618,65 @@ export default function PostPage({ post, relatedPosts = [] }) {
                         {/* 預覽已上傳媒體 */}
                         {pendingMedia.length > 0 && (
                           <div className="flex flex-wrap gap-3 mt-2">
-                            {pendingMedia.map((m) => (
+                            {pendingMedia.map((m, idx) => (
                               <div
                                 key={m.id}
                                 className="relative group w-24 h-24 border border-[#e5e5e5] overflow-hidden rounded-[4px] bg-[#f5f5f5]"
                               >
-                                {m.media_type === "image" ? (
-                                  <img
-                                    src={m.public_url}
-                                    alt={m.file_name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <video
-                                    src={m.public_url}
-                                    className="w-full h-full object-cover"
-                                    muted
-                                  />
-                                )}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openReviewMediaGallery(
+                                      pendingMedia,
+                                      idx,
+                                      "上傳預覽",
+                                    )
+                                  }
+                                  className="w-full h-full cursor-pointer hover:opacity-90 transition-opacity"
+                                  aria-label={
+                                    m.media_type === "video"
+                                      ? `播放影片：${m.file_name}`
+                                      : `檢視圖片：${m.file_name}`
+                                  }
+                                >
+                                  {m.media_type === "image" ? (
+                                    <img
+                                      src={m.public_url}
+                                      alt={m.file_name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <>
+                                      <video
+                                        src={m.public_url}
+                                        className="w-full h-full object-cover"
+                                        muted
+                                        playsInline
+                                        preload="metadata"
+                                      />
+                                      <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                        <svg
+                                          width="22"
+                                          height="22"
+                                          viewBox="0 0 24 24"
+                                          fill="white"
+                                          aria-hidden="true"
+                                        >
+                                          <path d="M8 5v14l11-7z" />
+                                        </svg>
+                                      </span>
+                                    </>
+                                  )}
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => removeMedia(m.id)}
-                                  className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute top-1 right-1 z-10 w-5 h-5 bg-black/60 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                   ✕
                                 </button>
                                 {m.media_type === "video" && (
-                                  <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1 rounded">
+                                  <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1 rounded pointer-events-none">
                                     影片
                                   </span>
                                 )}
@@ -708,34 +819,17 @@ export default function PostPage({ post, relatedPosts = [] }) {
 
                           {/* 附件媒體 */}
                           {review.blog_review_media?.length > 0 && (
-                            <div className="flex flex-wrap gap-3 mt-4 ml-11">
-                              {review.blog_review_media.map((m) => (
-                                <div
-                                  key={m.id}
-                                  className="w-28 h-28 border border-[#e5e5e5] overflow-hidden rounded-[4px] bg-[#f5f5f5]"
-                                >
-                                  {m.media_type === "image" ? (
-                                    <a
-                                      href={m.public_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      <img
-                                        src={m.public_url}
-                                        alt={m.file_name}
-                                        className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-                                      />
-                                    </a>
-                                  ) : (
-                                    <video
-                                      src={m.public_url}
-                                      controls
-                                      className="w-full h-full object-cover"
-                                    />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
+                            <ReviewMediaThumbnails
+                              media={review.blog_review_media}
+                              wrapperClassName="mt-4 ml-11"
+                              onItemClick={(idx) =>
+                                openReviewMediaGallery(
+                                  review.blog_review_media,
+                                  idx,
+                                  `${review.user_name} 的評論`,
+                                )
+                              }
+                            />
                           )}
                         </div>
                       ))}
@@ -988,6 +1082,17 @@ export default function PostPage({ post, relatedPosts = [] }) {
             }
           }
         `}</style>
+
+        <MediaGalleryLightbox
+          isOpen={reviewMediaGallery.isOpen}
+          onClose={() =>
+            setReviewMediaGallery((gallery) => ({ ...gallery, isOpen: false }))
+          }
+          images={reviewMediaGallery.items}
+          title={reviewMediaGallery.title}
+          initialIndex={reviewMediaGallery.initialIndex}
+          ariaLabel="評論媒體檢視"
+        />
       </Layout>
     </ReactLenis>
   );

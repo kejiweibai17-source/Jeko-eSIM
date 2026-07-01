@@ -10,9 +10,10 @@ import Project from "../components/ServiceSection.jsx";
 import SvgCard from "../components/SvgHoverCard.jsx";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image.js";
+import { getImageAlt } from "../lib/imageAlt.js";
 import MaskText from "../components/MaskText.jsx";
 import Slider from "../components/Slider.jsx";
-// GSAP & Lenis Imports
+import Link from "next/link.js";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
@@ -50,6 +51,35 @@ function QuickLinkButton({ text, active = false, link = "#" }) {
   );
 }
 
+const CHECK_ESIM_SUPPORT_IMAGES = [
+  "/images/check-esim-support/support-01.png",
+  "/images/check-esim-support/support-02.png",
+  "/images/check-esim-support/support-03.png",
+];
+
+const ESIM_INSTALL_METHODS = [
+  {
+    title: "使用行動條碼掃描",
+    desc: "前往「設定」>「行動服務」>「加入 eSIM」，選擇「使用行動條碼」，掃描 Jeko 寄給您的 QR Code 即可完成安裝。",
+    image: "/images/how-to-install-esim/使用行動條碼掃描.png",
+  },
+  {
+    title: "使用相機掃描 QR Code",
+    desc: "開啟 iPhone 相機對準 QR Code，點擊畫面上方出現的「行動方案」通知，依指示加入 eSIM。",
+    image: "/images/how-to-install-esim/使用相機掃描qrcode.png",
+  },
+  {
+    title: "長按 QR Code 啟用",
+    desc: "在郵件、LINE 或訂單頁長按 QR Code 圖片，選擇「加入行動方案」或「加入 eSIM」，即可開始安裝。",
+    image: "/images/how-to-install-esim/長按qrcode啟用.png",
+  },
+  {
+    title: "手動安裝",
+    desc: "若無法掃描 QR Code，請選擇「手動輸入詳細資料」，輸入 SM-DP+ 位址與啟用碼（訂單信內提供）完成安裝。",
+    image: "/images/how-to-install-esim/手動安裝.png",
+  },
+];
+
 export default function Home() {
   const containerRef = useRef(null);
 
@@ -59,6 +89,25 @@ export default function Home() {
 
   // ★ 安裝教學區塊狀態 (iOS/Android 切換)
   const [activeSystem, setActiveSystem] = useState("ios");
+  const [imageLightbox, setImageLightbox] = useState(null);
+  const [openInstallSteps, setOpenInstallSteps] = useState({ 1: true });
+
+  const toggleInstallStep = (step) => {
+    setOpenInstallSteps((prev) => ({ ...prev, [step]: !prev[step] }));
+  };
+
+  useEffect(() => {
+    if (!imageLightbox) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setImageLightbox(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [imageLightbox]);
 
   // ★ Banner 輪播狀態設定 (停留再滑動版本)
   const bannerImages = [
@@ -162,23 +211,25 @@ export default function Home() {
   const iosSteps = [
     {
       step: 1,
-      title: "進入設定",
-      desc: "前往「設定」>「行動服務」> 點擊「加入 eSIM」。",
+      title: "安裝eSIM",
+      desc: "可透過以下四種方式安裝 Jeko eSIM，請選擇最順手的一種完成設定。",
+      isAccordion: true,
+      methods: ESIM_INSTALL_METHODS,
     },
     {
       step: 2,
-      title: "掃描 QR Code",
-      desc: "選擇「使用行動條碼」，掃描我們寄給您的 QR Code。若無法掃描，可手動輸入啟用碼。",
+      title: "設置eSIM標籤",
+      desc: "啟用eSIM 後，會自動跳轉到行動服務頁面，在這個頁面你可以看到SIM卡清單。新增的eSIM將出現在清單底部，並且通常預設為「旅遊」或其他標籤。如果您喜歡不同的標籤，可以隨時自訂。只需選擇對應的eSIM並根據您的喜好修改其名稱即可。在這裏，在標有「CUSTOM LABEL」的空白欄，我們輸入「jeko eSIM」作爲這個eSIM方案的自定義標簽。",
+      image: "/images/esim-setting/設置eSIM標籤.png",
+      isAccordion: true,
     },
     {
       step: 3,
-      title: "設定標籤",
-      desc: "將此 eSIM 標籤設為「旅遊」或「Jeko」，並將其設為「行動數據」的預設號碼 (僅在抵達目的地後切換)。",
-    },
-    {
-      step: 4,
       title: "抵達後啟用",
-      desc: "抵達目的地後，開啟此 eSIM 的「數據漫遊」，即可開始上網。",
+      desc: "使用時，請確保將 jeko eSIM 的旅行 eSIM 設定為預設行動數據／行動數據線路。",
+
+      image: "/images/arrival/抵達當地後設為預設行動數據.png",
+      isAccordion: true,
     },
   ];
 
@@ -567,34 +618,36 @@ export default function Home() {
           <div className="jesko-hero-header"></div>
         </section> */}
 
-        <section className=" rounded-br-[60px] mt-20 rounded-bl-[60px] lg:rounded-br-[130px] lg:rounded-bl-[130px] pb-10  ">
-          <div className="flex flex-col pt-4 lg:flex-row max-w-[1250px] mx-auto justify-between px-6 lg:px-0">
-            <div className="txt">
-              <MaskText blockColor="#30AE99">
-                <h2 className="text-stone-900 tracking-widest text-xl lg:text-5xl font-normal ">
-                  快速找到您想去的<br></br> <br></br>{" "}
-                  <span className="block text-stone-900 tracking-widest mt-0 md:mt-5 text-3xl lg:text-6xl !font-extrabold ml-0  ">
+        <section className="rounded-br-[60px] mt-20 rounded-bl-[60px] lg:rounded-br-[130px] lg:rounded-bl-[130px] pb-10 overflow-hidden">
+          <div className="flex flex-col gap-5 pt-4 lg:gap-0 lg:flex-row max-w-[1250px] mx-auto justify-between px-5 sm:px-6 lg:px-0">
+            <div className="txt min-w-0 w-full lg:max-w-[62%]">
+              <MaskText blockColor="#0A6CD0">
+                <h2 className="text-stone-900 font-bold leading-[1.35]">
+                  <span className="block text-[22px] sm:text-3xl lg:text-5xl tracking-wide lg:tracking-widest">
+                    快速找到您想去的
+                  </span>
+                  <span className="block mt-2 sm:mt-3 lg:mt-5 text-[28px] sm:text-4xl lg:text-6xl font-extrabold tracking-wide lg:tracking-widest">
                     旅遊 eSIM
                   </span>
                 </h2>
               </MaskText>
-              <MaskText blockColor="#30AE99">
-                <p className="text-stone-800 font-normal text-[14px] lg:text-[16px] mt-4 md:mt-6  ">
-                  在 Jeko 探索 經濟高效的旅遊數據方案
-                  <br className="hidden lg:block"></br>
-                  隨時隨地無縫連接 告別昂貴的國際漫遊費
+              <MaskText blockColor="#0A6CD0">
+                <p className="text-stone-800 font-normal text-[14px] lg:text-[16px] mt-4 md:mt-6 leading-relaxed tracking-normal max-w-xl">
+                  在 Jeko 探索經濟高效的旅遊數據方案，
+                  <br className="hidden lg:block" />
+                  隨時隨地無縫連接，告別昂貴的國際漫遊費
                 </p>
               </MaskText>
             </div>
-            <div className="flex  items-end">
-              <div>
-                <span className=" rounded-full px-3 py-1  mx-2  text-[14px]">
+            <div className="flex items-start lg:items-end w-full lg:w-auto shrink-0">
+              <div className="flex flex-wrap gap-x-2 gap-y-2 sm:gap-x-3 text-[12px] sm:text-[14px] text-stone-700">
+                <span className="rounded-full px-2.5 py-1 sm:px-3 whitespace-nowrap">
                   . 旅遊eSIM
                 </span>
-                <span className=" rounded-full px-3 py-1  mx-2  text-[14px]">
+                <span className="rounded-full px-2.5 py-1 sm:px-3 whitespace-nowrap">
                   . 商務留學用eSIM
                 </span>
-                <span className=" rounded-full px-3 py-1  mx-2  text-[14px]">
+                <span className="rounded-full px-2.5 py-1 sm:px-3 whitespace-nowrap">
                   . 各國旅遊eSIM方案
                 </span>
               </div>
@@ -667,31 +720,26 @@ export default function Home() {
         </section> */}
 
         <section className="relative rounded-[32px] z-[99] bg-white/40 border border-white/30 backdrop-blur-[25px] shadow-[0_30px_80px_rgba(36,57,69,0.15)] px-4 sm:px-10 mx-auto mt-[50px] w-[95%] lg:w-[96%] pt-[30px] lg:py-[100px]">
-          <MaskText blockColor="#30AE99">
+          <MaskText blockColor="#0A6CD0">
             <div className="main-title max-w-[1000px] mx-auto flex justify-center flex-col items-center text-center">
               <h2 className="text-3xl lg:text-5xl font-bold">如何使用 eSIM?</h2>
-              <p className="text-slate-700 text-lg mt-3">
-                How to use / Installation
-              </p>
+              <p className="mt-3">[ 幾個簡易步驟直接開始使用 ] </p>
             </div>
           </MaskText>
-          <div className="rounded-2xl bg-[#EBEEEF] py-10 lg:py-20 max-w-[1500px] mx-auto flex justify-center flex-col items-center mt-8">
+          <div className="rounded-2xl  py-10 lg:py-20 max-w-[1500px] mx-auto flex justify-center flex-col items-center mt-8">
             <div className="mb-10 w-full flex justify-around">
               <div className="flex flex-col lg:flex-row w-[90%] lg:w-[80%] mx-auto gap-8 lg:gap-0">
                 <div className="w-full lg:w-1/2 flex lg:pr-10 items-center flex-col text-center lg:text-left">
                   <div>
                     <div className="max-w-full lg:max-w-[280px] mx-auto lg:mx-0">
-                      <div className="bg-[#30ae99] p-2 rounded-[8px] text-white text-[16px] font-bold inline-block lg:block">
-                        無論你去哪裡旅行，保持連線不斷網
-                      </div>
                       <h3 className="text-2xl lg:text-3xl font-bold mt-4 lg:mt-2">
                         什麼是 eSIM？
                       </h3>
                     </div>
-                    <p className="text-center lg:text-left font-bold mt-2">
+                    <p className="text-center lg:text-left font-bold text-2xl mt-2">
                       告別實體 SIM 卡的束縛
                     </p>
-                    <p className="mt-4 leading-relaxed text-gray-700 text-sm lg:text-base">
+                    <p className="mt-4 leading-relaxed text-stone-900 text-sm lg:text-base">
                       eSIM（嵌入式 SIM
                       卡）是新一代的網路技術。無需抽換實體卡片，只需掃描 QR Code
                       設定，抵達目的地後開啟數據漫遊，即可立即連接當地高速網路，省去保管實體卡片的麻煩。
@@ -699,35 +747,61 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="w-full lg:w-1/2 lg:pr-10">
-                  <img
-                    src="/images/如何使用esim.png"
-                    className="w-full rounded-xl shadow-md"
-                    alt="eSIM使用說明"
-                  />
+                  <Image
+                    src="/images/操作簡單立即使用_jeko-esim_日本韓國_多國eSIM方案.png"
+                    place
+                    empty
+                    className=""
+                    width={800}
+                    height={1000}
+                  ></Image>
                 </div>
               </div>
             </div>
 
-            <div className="border-t lg:border-t-0 lg:border-l-4 border-[#147AD7] w-full flex justify-around pt-10 lg:pt-0">
+            <div className="border-t lg:border-t-0   w-full flex justify-around pt-10 lg:pt-0">
               <div className="flex flex-col lg:flex-row w-[90%] lg:w-[80%] mx-auto gap-8 lg:gap-0">
-                <div className="w-full lg:w-1/2 flex items-center flex-col text-center lg:text-left">
+                <div className="w-full lg:w-[80] flex items-start flex-col text-center lg:text-left">
                   <div>
-                    <h3 className="text-2xl lg:text-3xl font-bold leading-snug">
+                    <h3 className="text-2xl mb-4 lg:text-3xl font-bold leading-snug">
                       請確保您的手機
                       <br className="hidden lg:block" />
                       已解鎖且支援 eSIM
                     </h3>
-                    <p className="text-center lg:text-left font-bold mt-2 text-[#147AD7]">
-                      Before You Buy
-                    </p>
-                    <p className="mt-4 leading-relaxed text-gray-700 text-sm lg:text-base">
+                    <a
+                      href="/"
+                      target="_blank"
+                      className="bg-[#0A6CD0] py-2 px-4 rounded-[12px]   !mt-4 text-white text-[16px] font-bold "
+                    >
+                      如何查看手機是否支援eSIM
+                    </a>
+                    <p className="mt-4 leading-relaxed max-w-[600px] text-stone-900 text-sm lg:text-base">
                       在購買前，請務必確認您的裝置支援 eSIM
                       功能且未被電信商鎖定（Sim-Lock Free）。 目前市面上新款
                       iPhone （XR/XS 以後機型）及多數 Android 旗艦機種皆已支援。
                     </p>
                   </div>
+                  <div className="check-esim-img flex gap-2 sm:gap-3 mt-6 w-full ">
+                    {CHECK_ESIM_SUPPORT_IMAGES.map((src) => (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => setImageLightbox(src)}
+                        className="relative flex-1 aspect-[4/5] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0A6CD0] rounded-lg overflow-hidden"
+                        aria-label={`放大檢視：${getImageAlt(src)}`}
+                      >
+                        <Image
+                          src={src}
+                          alt={getImageAlt(src)}
+                          fill
+                          sizes="(max-width: 1424px) 40vw, 560px"
+                          className="object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="w-full lg:w-1/2">
+                <div className="w-full px-5 lg:w-[20%]">
                   <div className="flex flex-col gap-3">
                     <QuickLinkButton text="查看支援裝置列表" active />
                     <QuickLinkButton text="產品相關政策及規範" />
@@ -741,17 +815,22 @@ export default function Home() {
             </div>
 
             <div className="bg-white rounded-[20px] w-[90%] lg:w-[80%] mx-auto p-6 lg:p-10 mt-16 shadow-sm border border-slate-100">
-              <div className="flex justify-center mb-10">
+              <MaskText blockColor="#0A6CD0">
+                <div className="main-title max-w-[1000px] mx-auto flex justify-center flex-col items-center text-center">
+                  <h2 className="text-2xl lg:text-3xl font-bold">啟用設定</h2>
+                </div>
+              </MaskText>
+              <div className="flex justify-center mt-4 mb-10">
                 <div className="bg-[#EBEEEF] p-1 rounded-full inline-flex">
                   <button
                     onClick={() => setActiveSystem("ios")}
-                    className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${activeSystem === "ios" ? "bg-[#147AD7] text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${activeSystem === "ios" ? "bg-[#147AD7] text-white shadow-md" : "text-gray-500 hover:text-stone-900"}`}
                   >
                     iOS (iPhone)
                   </button>
                   <button
                     onClick={() => setActiveSystem("android")}
-                    className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${activeSystem === "android" ? "bg-[#30ae99] text-white shadow-md" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${activeSystem === "android" ? "bg-[#30ae99] text-white shadow-md" : "text-gray-500 hover:text-stone-900"}`}
                   >
                     Android
                   </button>
@@ -764,36 +843,177 @@ export default function Home() {
                     key={index}
                     className="step group border-b border-gray-100 py-4 lg:py-6 last:border-b-0 transition-all duration-300 hover:bg-slate-50 rounded-xl px-2 lg:px-4"
                   >
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-8">
-                      <div
-                        className={`w-[40px] h-[40px] lg:w-[50px] lg:h-[50px] rounded-full text-white flex justify-center items-center font-bold text-lg lg:text-xl shrink-0 transition-colors duration-300 ${activeSystem === "ios" ? "bg-[#428aef]" : "bg-[#30ae99]"}`}
-                      >
-                        {item.step}
-                      </div>
-                      <div className="flex flex-col justify-center w-full">
-                        <h3 className="text-lg lg:text-xl font-bold text-slate-800 mb-1 group-hover:text-[#147AD7] transition-colors">
-                          {item.title}
-                        </h3>
-                        <p className="text-sm lg:text-base text-slate-600 leading-relaxed">
-                          {item.desc}
-                        </p>
-                      </div>
-                      <div className="hidden lg:block text-gray-300 group-hover:text-[#147AD7] group-hover:translate-x-2 transition-all">
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                    {item.isAccordion ? (
+                      <div className="w-full">
+                        <button
+                          type="button"
+                          onClick={() => toggleInstallStep(item.step)}
+                          className="flex w-full items-start gap-4 lg:gap-8 text-left"
+                          aria-expanded={!!openInstallSteps[item.step]}
                         >
-                          <path d="M5 12h14" />
-                          <path d="m12 5 7 7-7 7" />
-                        </svg>
+                          <div
+                            className={`w-[40px] h-[40px] lg:w-[50px] lg:h-[50px] rounded-full text-white flex justify-center items-center font-bold text-lg lg:text-xl shrink-0 ${activeSystem === "ios" ? "bg-[#428aef]" : "bg-[#30ae99]"}`}
+                          >
+                            {item.step}
+                          </div>
+                          <div className="flex flex-1 items-center justify-between gap-4 min-w-0">
+                            <h3 className="text-lg lg:text-xl font-bold text-slate-800">
+                              {item.title}
+                            </h3>
+                            <svg
+                              className={`w-5 h-5 shrink-0 text-slate-500 transition-transform duration-300 ${openInstallSteps[item.step] ? "rotate-180" : ""}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </div>
+                        </button>
+
+                        {openInstallSteps[item.step] && (
+                          <div className="mt-4 pl-0 lg:pl-[82px]">
+                            <p className="text-sm lg:text-base text-slate-600 leading-relaxed mb-6">
+                              {item.desc}
+                            </p>
+
+                            {item.subDesc && (
+                              <p className="text-sm lg:text-base font-semibold text-slate-700 mb-3">
+                                {item.subDesc}
+                              </p>
+                            )}
+
+                            {item.bullets?.length > 0 && (
+                              <ul className="space-y-3 mb-4">
+                                {item.bullets.map((bullet) => (
+                                  <li
+                                    key={bullet}
+                                    className="flex gap-2 text-sm lg:text-base text-slate-600 leading-relaxed"
+                                  >
+                                    <span className="text-[#147AD7] font-bold shrink-0">
+                                      →
+                                    </span>
+                                    <span>{bullet}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+
+                            {item.note && (
+                              <p className="text-sm lg:text-base text-slate-600 leading-relaxed mb-6 bg-amber-50 border border-amber-100 rounded-lg p-4">
+                                {item.note}
+                              </p>
+                            )}
+
+                            {item.methods?.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
+                                {item.methods.map((method) => (
+                                  <div key={method.image} className="min-w-0">
+                                    <h4 className="text-base font-bold text-slate-800 mb-2">
+                                      {method.title}
+                                    </h4>
+                                    <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                                      {method.desc}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setImageLightbox(method.image)
+                                      }
+                                      className="relative w-full aspect-[4/5] cursor-pointer rounded-lg overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#147AD7]"
+                                      aria-label={`放大檢視：${getImageAlt(method.image)}`}
+                                    >
+                                      <Image
+                                        src={method.image}
+                                        alt={getImageAlt(method.image)}
+                                        fill
+                                        sizes="(max-width: 640px) 100vw, 360px"
+                                        className="object-cover"
+                                      />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {item.image && (
+                              <button
+                                type="button"
+                                onClick={() => setImageLightbox(item.image)}
+                                className="relative w-full max-w-md aspect-[4/5] cursor-pointer rounded-lg overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#147AD7]"
+                                aria-label={`放大檢視：${getImageAlt(item.image)}`}
+                              >
+                                <Image
+                                  src={item.image}
+                                  alt={getImageAlt(item.image)}
+                                  fill
+                                  sizes="(max-width: 640px) 100vw, 360px"
+                                  className="object-cover"
+                                />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-8">
+                          <div
+                            className={`w-[40px] h-[40px] lg:w-[50px] lg:h-[50px] rounded-full text-white flex justify-center items-center font-bold text-lg lg:text-xl shrink-0 transition-colors duration-300 ${activeSystem === "ios" ? "bg-[#428aef]" : "bg-[#30ae99]"}`}
+                          >
+                            {item.step}
+                          </div>
+                          <div className="flex flex-col justify-center w-full">
+                            <h3 className="text-lg lg:text-xl font-bold text-slate-800 mb-1 group-hover:text-[#147AD7] transition-colors">
+                              {item.title}
+                            </h3>
+                            <p className="text-sm lg:text-base text-slate-600 leading-relaxed">
+                              {item.desc}
+                            </p>
+                          </div>
+                          {!item.image && (
+                            <div className="hidden lg:block text-gray-300 group-hover:text-[#147AD7] group-hover:translate-x-2 transition-all">
+                              <svg
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M5 12h14" />
+                                <path d="m12 5 7 7-7 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        {item.image && (
+                          <div className="pl-0 lg:pl-[82px]">
+                            <button
+                              type="button"
+                              onClick={() => setImageLightbox(item.image)}
+                              className="relative w-full max-w-md aspect-[4/5] cursor-pointer rounded-lg overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#147AD7]"
+                              aria-label={`放大檢視：${getImageAlt(item.image)}`}
+                            >
+                              <Image
+                                src={item.image}
+                                alt={getImageAlt(item.image)}
+                                fill
+                                sizes="(max-width: 640px) 100vw, 360px"
+                                className="object-cover"
+                              />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -816,7 +1036,15 @@ export default function Home() {
                   <p className="text-sm text-slate-700 leading-relaxed">
                     <span className="font-bold text-[#147AD7]">貼心提醒：</span>
                     請務必在有 WiFi 或網路的環境下掃描安裝。掃描後請勿刪除 eSIM
-                    方案，一旦刪除將無法再次掃描使用。如果在安裝過程遇到問題，請截圖並聯繫客服。
+                    方案，一旦刪除將無法再次掃描使用。如果在安裝過程遇到問題，請截圖並{" "}
+                    <a
+                      className="border-b border-black"
+                      href="https://line.me/R/ti/p/@593gvyzn"
+                      target="_blank"
+                    >
+                      {" "}
+                      聯繫客服。
+                    </a>{" "}
                   </p>
                 </div>
               </div>
@@ -829,59 +1057,6 @@ export default function Home() {
           alt=""
           className="w-full relative  mt-[-130px] z-10"
         />
-
-        <section className="bg-[#147AD7]  p-6 lg:p-20 relative z-0">
-          <div className="max-w-[1400px] mx-auto   w-full">
-            <div className="main-title text-center lg:text-left">
-              <h2 className="text-white text-4xl lg:text-5xl font-bold tracking-widest">
-                Features
-              </h2>
-              <p className="text-slate-50">特色</p>
-            </div>
-            <div className="main pt-6 lg:pt-10">
-              <div>
-                <div className="title flex flex-col lg:flex-row w-full lg:w-[70%] justify-between items-center lg:items-start">
-                  <div className="flex flex-col">
-                    <h3 className="text-white text-2xl lg:text-3xl">
-                      精選全球 eSIM
-                    </h3>
-                  </div>
-                  <div className="flex mt-4 lg:mt-0 flex-wrap justify-center gap-2">
-                    <div className="bg-white flex tracking-wider items-center justify-center font-bold rounded-[20px] px-3 py-1 text-[12px] lg:text-[14px]">
-                      超快物流
-                    </div>
-                    <div className="bg-white flex tracking-wider items-center justify-center font-bold rounded-[20px] px-3 py-1 text-[12px] lg:text-[14px]">
-                      即時客服
-                    </div>
-                    <div className="bg-white flex tracking-wider items-center justify-center font-bold rounded-[20px] px-3 py-1 text-[12px] lg:text-[14px]">
-                      攻略分享
-                    </div>
-                  </div>
-                </div>
-                <div className="w-full lg:w-[30%]"></div>
-              </div>
-              <div className="chat p-6 lg:p-8 bg-white relative flex flex-col-reverse lg:flex-row rounded-[20px] mt-8 lg:mt-4 overflow-hidden lg:overflow-visible">
-                <div className="absolute bottom-[-20px] lg:bottom-[-30px] z-30 left-6 lg:left-10 w-[30px] h-[30px] lg:w-[40px] lg:h-[40px]">
-                  <img
-                    src="https://storage.googleapis.com/studio-design-asset-files/projects/8dO8NkVvan/s-43x30_bff1345c-8a45-4eed-ad55-45a1705d21db.svg"
-                    alt=""
-                    className="w-full"
-                  />
-                </div>
-                <div className="left w-full lg:w-[70%] mt-4 lg:mt-0">
-                  <AccordionEsim />
-                </div>
-                <div className="phone w-full lg:w-[30%] relative flex justify-center lg:justify-between items-end h-[200px] lg:h-auto">
-                  <img
-                    src="https://storage.googleapis.com/studio-design-asset-files/projects/8dO8NkVvan/s-464x928_v-fs_webp_26a92258-9a41-4f50-af8c-624012999e60_small.webp"
-                    className="w-[120px] lg:w-[60%] lg:absolute h-auto z-30 lg:left-1/2 lg:-translate-x-1/2 bottom-0"
-                    alt=""
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         <section className="bg-[#147AD7] w-full overflow-hidden py-2 sm:py-20">
           <div className="mt-8 lg:mt-5">
@@ -990,7 +1165,11 @@ export default function Home() {
                 歡迎聯繫我們客服，馬上為你解決
               </span>
             </div>
-            <div className="cta-btn-wrapper w-full">
+            <Link
+              href="https://line.me/R/ti/p/@593gvyzn"
+              target="_blank"
+              className="cta-btn-wrapper w-full"
+            >
               <div className="cta-btn group bg-[#0069CA] mt-6 lg:mt-4 rounded-[10px] p-2 cursor-pointer w-full">
                 <div className="inner group-hover:bg-white bg-transparent duration-500 p-6 lg:p-8 rounded-[10px] flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-0">
                   <div className="w-full lg:w-1/2">
@@ -1006,30 +1185,62 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="cta-btn-wrapper w-full">
+            </Link>
+            <Link href="/contact" className="cta-btn-wrapper w-full">
               <div className="cta-btn group bg-[#0069CA] mt-6 lg:mt-4 rounded-[10px] p-2 cursor-pointer w-full">
                 <div className="inner group-hover:bg-white bg-transparent duration-500 p-6 lg:p-8 rounded-[10px] flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-0">
                   <div className="w-full lg:w-1/2">
                     <h3 className="text-white group-hover:ml-0 lg:group-hover:ml-6 group-hover:text-[#0069CA] duration-300 font-bold text-xl lg:text-2xl">
-                      LINE 官方客服
+                      其他詢問
                     </h3>
                   </div>
                   <div className="border-t lg:border-t-0 lg:border-l-1 w-full lg:w-[55%] flex justify-start lg:justify-end !group-hover:w-full lg:!group-hover:w-[55%] duration-300 border-gray-50/30 lg:border-gray-50 pt-4 lg:pt-0 pl-0 lg:pl-5 group-hover:border-[#0069CA]">
                     <span className="text-white group-hover:mr-0 lg:group-hover:mr-10 duration-500 w-full lg:w-[300px] group-hover:text-[#0069CA] text-sm lg:text-[14px] leading-relaxed">
-                      直接使用 LINE
-                      與我們聯繫，真人客服即時在線。如有使用問題請直接加入好友詢問。
+                      填寫表單，我們會盡快回覆您
                     </span>
                   </div>
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
         </section>
         <div className="relative">
           <div className="absolute w-[300px] h-[400px]"></div>
         </div>
       </div>
+
+      {imageLightbox && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-4 sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-label="放大檢視圖片"
+          onClick={() => setImageLightbox(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setImageLightbox(null)}
+            className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-2xl text-white transition-colors hover:bg-white/30"
+            aria-label="關閉"
+          >
+            ×
+          </button>
+          <div
+            className="relative max-h-[90vh] max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={imageLightbox}
+              alt={getImageAlt(imageLightbox)}
+              width={1000}
+              height={1250}
+              sizes="(max-width: 768px) 95vw, 900px"
+              className="mx-auto max-h-[90vh] w-auto h-auto object-contain rounded-lg"
+              priority
+            />
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

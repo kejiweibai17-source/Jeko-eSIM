@@ -112,7 +112,7 @@ export default function ResetPasswordPage() {
             {submitting ? "設定中…" : "設定新密碼"}
           </button>
           {msg && (
-            <p className="text-sm text-center text-gray-700 mt-1">{msg}</p>
+            <p className="text-sm text-center text-stone-900 mt-1">{msg}</p>
           )}
         </form>
       </div>

@@ -107,7 +107,7 @@ export default function Home({ store }) {
                       {/* 上半部：永遠顯示的內容 */}
                       <div className="w-full flex flex-col md:flex-row justify-center items-center gap-6">
                         <div className="w-full md:w-1/2">
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -250,7 +250,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -290,7 +290,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -393,7 +393,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -432,7 +432,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -471,7 +471,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -550,7 +550,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -589,7 +589,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />
@@ -628,7 +628,7 @@ export default function Home({ store }) {
                     <div className="w-full md:w-4/5 flex flex-col md:flex-row justify-center border-t md:border-t-0 md:border-l border-gray-200 p-6 md:p-8 gap-6">
                       <div className="md:w-1/2 flex justify-center items-center">
                         <div>
-                          <p className="text-sm leading-relaxed text-gray-700">
+                          <p className="text-sm leading-relaxed text-stone-900">
                             為了確保您能順利安裝與啟用
                             eSIM，請先確認您的手機是否支援 eSIM，
                             <br />

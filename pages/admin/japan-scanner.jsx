@@ -56,8 +56,8 @@ const COUNTRIES = {
 
 // --- 匯率設定 (請依照您的銀行匯率微調) ---
 const RATES = {
-  USD: 33.0,  // 美金轉台幣 (抓寬鬆一點)
-  HKD: 4.5,   // 港幣轉台幣
+  USD: 33.0, // 美金轉台幣 (抓寬鬆一點)
+  HKD: 4.5, // 港幣轉台幣
 };
 
 export default function GlobalPlanScanner() {
@@ -88,7 +88,9 @@ export default function GlobalPlanScanner() {
 
       // 🔥 Debug: 偷看這個特定方案 API 傳回來多少錢
       // ID 5975 是您截圖中的韓國方案
-      const debugPlan = allPlans.find(p => p.id === 5975 || (p.code && p.code.includes('Daily1GB-4')));
+      const debugPlan = allPlans.find(
+        (p) => p.id === 5975 || (p.code && p.code.includes("Daily1GB-4")),
+      );
       if (debugPlan) {
         console.log("🔥 [DEBUG] 韓國方案 5975 原始資料:", debugPlan);
         console.log("🔥 [DEBUG] 原始價格 (price):", debugPlan.price);
@@ -114,11 +116,13 @@ export default function GlobalPlanScanner() {
     const countryPlans = rawPlans.filter((p) => {
       const name = (p.name || p.channel_dataplan_name || "").toLowerCase();
       const code = p.code || p.location || "";
-      
+
       // 檢查 Code 是否符合 OR 名稱是否包含國家關鍵字
       const isCodeMatch = config.codes.includes(code);
-      const isNameMatch = config.keywords.some(k => name.includes(k.toLowerCase()));
-      
+      const isNameMatch = config.keywords.some((k) =>
+        name.includes(k.toLowerCase()),
+      );
+
       return isCodeMatch || isNameMatch;
     });
 
@@ -149,7 +153,9 @@ export default function GlobalPlanScanner() {
 
       // --- 通用原生判斷邏輯 ---
       // 檢查 APN 或 名稱 是否包含該國家的原生電信商關鍵字
-      let isNative = config.nativeKeywords.some(k => apn.includes(k) || name.includes(k));
+      let isNative = config.nativeKeywords.some(
+        (k) => apn.includes(k) || name.includes(k),
+      );
 
       let isDaily = name.includes("daily") || name.includes("天");
       let isTotal = name.includes("total") || name.includes("總量");
@@ -159,13 +165,13 @@ export default function GlobalPlanScanner() {
       let supportChatGPT = false;
       let supportTikTok = false;
 
-      if (selectedCountry === 'CN') {
+      if (selectedCountry === "CN") {
         // 中國特殊邏輯：漫遊線路 (非 Native) 才通常支援
-        supportChatGPT = !isNative; 
+        supportChatGPT = !isNative;
         supportTikTok = !isNative;
       } else {
         // 其他國家：通常有標籤或是原生線路都支援
-        supportChatGPT = tags.includes("ChatGPT✅") || true; 
+        supportChatGPT = tags.includes("ChatGPT✅") || true;
         supportTikTok = tags.includes("TikTok✅") || true;
       }
 
@@ -185,7 +191,7 @@ export default function GlobalPlanScanner() {
         apn,
         rawPrice, // 原始價格
         currencyUsed, // 使用的幣別
-        costTWD,  // 計算後的台幣成本
+        costTWD, // 計算後的台幣成本
         suggestedPrice,
         isNative,
         isDaily,
@@ -200,7 +206,6 @@ export default function GlobalPlanScanner() {
 
     setPlans(processed);
   }, [rawPlans, selectedCountry]);
-
 
   // --- 核心篩選邏輯 (useMemo) ---
   const filteredPlans = useMemo(() => {
@@ -340,8 +345,12 @@ export default function GlobalPlanScanner() {
         {/* --- 結果表格 --- */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-4 bg-gray-50 border-b border-gray-200 text-sm text-gray-500 flex justify-between items-center">
-            <span className="font-bold text-gray-700">{currentConfig.name} 方案列表</span>
-            <span className="bg-gray-200 px-2 py-1 rounded text-xs">共 {filteredPlans.length} 筆</span>
+            <span className="font-bold text-stone-900">
+              {currentConfig.name} 方案列表
+            </span>
+            <span className="bg-gray-200 px-2 py-1 rounded text-xs">
+              共 {filteredPlans.length} 筆
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
@@ -352,7 +361,9 @@ export default function GlobalPlanScanner() {
                   <th className="p-4">方案名稱 / 流量</th>
                   <th className="p-4 w-32">支援度</th>
                   <th className="p-4 text-right w-32">成本 (TWD)</th>
-                  <th className="p-4 text-right w-32 text-blue-600">建議售價</th>
+                  <th className="p-4 text-right w-32 text-blue-600">
+                    建議售價
+                  </th>
                   <th className="p-4 text-center w-24">操作</th>
                 </tr>
               </thead>
@@ -373,27 +384,39 @@ export default function GlobalPlanScanner() {
                       {p.day} 天
                     </td>
                     <td className="p-4">
-                      <div className="font-bold text-gray-800 text-base">{p.data}</div>
-                      <div className="text-xs text-gray-400 mt-1 line-clamp-1">{p.name}</div>
+                      <div className="font-bold text-gray-800 text-base">
+                        {p.data}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1 line-clamp-1">
+                        {p.name}
+                      </div>
                       <div className="flex gap-2 mt-1">
                         {p.isUnlimited && (
-                           <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded border border-green-200">吃到飽</span>
+                          <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded border border-green-200">
+                            吃到飽
+                          </span>
                         )}
-                        <span className="text-[10px] bg-gray-100 text-gray-600 px-1 rounded border border-gray-200">{p.apn}</span>
+                        <span className="text-[10px] bg-gray-100 text-gray-600 px-1 rounded border border-gray-200">
+                          {p.apn}
+                        </span>
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col gap-1 text-xs">
                         <span
                           className={
-                            p.supportChatGPT ? "text-green-700 font-bold" : "text-gray-400"
+                            p.supportChatGPT
+                              ? "text-green-700 font-bold"
+                              : "text-gray-400"
                           }
                         >
                           {p.supportChatGPT ? "✅ GPT" : "❌ GPT"}
                         </span>
                         <span
                           className={
-                            p.supportTikTok ? "text-green-700 font-bold" : "text-gray-400"
+                            p.supportTikTok
+                              ? "text-green-700 font-bold"
+                              : "text-gray-400"
                           }
                         >
                           {p.supportTikTok ? "✅ TikTok" : "❌ TikTok"}

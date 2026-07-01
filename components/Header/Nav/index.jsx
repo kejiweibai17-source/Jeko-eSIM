@@ -78,7 +78,7 @@ export default function Nav() {
       <div className="Login_Out px-4 py-2 text-center">
         {userInfo ? (
           <div className="flex items-center justify-center gap-3">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-stone-900">
               Hi, {userInfo.name || userInfo.username}
             </span>
             <button

@@ -144,8 +144,7 @@ const slides = [
     image: "/images/Hero-banner-01.png",
     imageMobile: "/images/hero-banner-mobile.png",
   },
-  { image: "/images/banner33.png" },
-  { image: "/images/優惠banner04.png" },
+  { image: "/images/九州.png" },
 
   { image: "/images/location/fcc7e825-9136-4c9d-8312-3309fe189b4c.png" },
   { image: "/images/location/korea-02.png" },

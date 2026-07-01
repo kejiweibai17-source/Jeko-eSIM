@@ -163,7 +163,7 @@ const CartPage = () => {
 
                             <div className="flex justify-between items-end mt-4">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-gray-700">
+                                <span className="text-sm font-bold text-stone-900">
                                   數量：
                                 </span>
                                 <div className="flex items-center border border-gray-300 rounded-md">
@@ -372,14 +372,23 @@ const CartPage = () => {
                           />
                           <span className="text-xs text-gray-600 leading-tight">
                             我同意{" "}
-                            <Link href="/terms" className="text-blue-600 hover:underline" target="_blank">
+                            <Link
+                              href="/terms"
+                              className="text-blue-600 hover:underline"
+                              target="_blank"
+                            >
                               服務條款
                             </Link>
                             、
-                            <Link href="/refund-policy" className="text-blue-600 hover:underline" target="_blank">
+                            <Link
+                              href="/refund-policy"
+                              className="text-blue-600 hover:underline"
+                              target="_blank"
+                            >
                               退換貨政策
                             </Link>
-                            ，並確認 eSIM 為數位商品，掃描開通後即無法退款（除政策例外）。
+                            ，並確認 eSIM
+                            為數位商品，掃描開通後即無法退款（除政策例外）。
                           </span>
                         </label>
 

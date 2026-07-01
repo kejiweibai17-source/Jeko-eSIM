@@ -43,7 +43,7 @@ export default function CustomAccordion({ items }: { items: AccordionItem[] }) {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="px-4 pb-4 text-sm leading-relaxed text-gray-700">
+                  <div className="px-4 pb-4 text-sm leading-relaxed text-stone-900">
                     {item.answer}
                   </div>
                 </motion.div>

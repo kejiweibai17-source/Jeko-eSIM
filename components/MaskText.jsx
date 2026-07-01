@@ -11,7 +11,7 @@ gsap.registerPlugin(SplitText, ScrollTrigger);
 export default function Copy({
   children,
   animateOnScroll = true,
-  delay = 1.8, // ★ 修改 1: 將預設延遲改為 1.5 秒
+  delay = 0,
   blockColor = "#000",
   stagger = 0.15,
   duration = 0.75,
@@ -77,8 +77,8 @@ export default function Copy({
 
       // 4. 建立主時間軸
       const tl = gsap.timeline({
-        paused: true, // 預設暫停，等待 ScrollTrigger 觸發
-        delay: delay, // ★ 套用延遲時間 (1.5秒)
+        paused: true,
+        delay,
       });
 
       // 依序建立動畫序列
@@ -122,9 +122,9 @@ export default function Copy({
       if (animateOnScroll) {
         ScrollTrigger.create({
           trigger: containerRef.current,
-          start: "top 80%", // 當視窗捲動到元素頂部 80% 處 (進入視線) 時觸發
+          start: "top bottom",
           once: true,
-          onEnter: () => tl.play(), // 播放動畫 (會包含 1.5秒的 delay)
+          onEnter: () => tl.play(),
         });
       } else {
         tl.play();

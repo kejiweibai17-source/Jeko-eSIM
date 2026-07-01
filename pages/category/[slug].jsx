@@ -43,7 +43,7 @@ export async function getStaticPaths() {
     if (!Array.isArray(categories)) {
       console.error(
         "❌ API 回傳格式錯誤 (不是陣列):",
-        JSON.stringify(categories, null, 2)
+        JSON.stringify(categories, null, 2),
       );
       // 如果 API 回傳錯誤訊息 (例如 401 Unauthorized)，不要讓 .map() 炸掉程式
       return { paths: [], fallback: "blocking" };
@@ -101,7 +101,7 @@ const CategoryPage = ({ slug, categories, initialProducts }) => {
   const router = useRouter();
   // 使用 initialProducts 作為初始資料，避免在前端再次 fetch 暴露金鑰
   const [filteredProducts, setFilteredProducts] = useState(
-    initialProducts || []
+    initialProducts || [],
   );
   const [activeTags, setActiveTags] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,10 +126,10 @@ const CategoryPage = ({ slug, categories, initialProducts }) => {
     } else {
       const filtered = initialProducts.filter((product) => {
         const tagMatch = activeTags.every((tag) =>
-          product.tags?.some((t) => t.slug === tag || t.name === tag)
+          product.tags?.some((t) => t.slug === tag || t.name === tag),
         );
         const categoryMatch = activeTags.every((tag) =>
-          product.categories?.some((cat) => cat.slug === tag)
+          product.categories?.some((cat) => cat.slug === tag),
         );
         return tagMatch || categoryMatch;
       });
@@ -169,7 +169,7 @@ const CategoryPage = ({ slug, categories, initialProducts }) => {
                     query: { ...router.query, tags: tagQuery },
                   },
                   undefined,
-                  { scroll: false }
+                  { scroll: false },
                 );
               }}
             />
@@ -189,7 +189,7 @@ const CategoryPage = ({ slug, categories, initialProducts }) => {
                 {currentProducts.map((product, index) => {
                   // 解析圖片邏輯
                   const match = product?.description?.match(
-                    /<img[^>]+src="([^">]+)"/
+                    /<img[^>]+src="([^">]+)"/,
                   );
                   const extractedImg = match?.[1];
                   const productImage =
@@ -231,7 +231,7 @@ const CategoryPage = ({ slug, categories, initialProducts }) => {
                           <span className="font-bold text-[16px] block mb-1">
                             {product.name}
                           </span>
-                          <div className="text-gray-700">
+                          <div className="text-stone-900">
                             {price ? (
                               <>
                                 {regularPrice && regularPrice !== price && (

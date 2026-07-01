@@ -302,7 +302,7 @@ export default function PartnerCart({ store }) {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                        <label className="block text-sm font-bold text-stone-900 mb-2">
                           購買人姓名
                         </label>
                         <input
@@ -312,7 +312,7 @@ export default function PartnerCart({ store }) {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                        <label className="block text-sm font-bold text-stone-900 mb-2">
                           聯絡電話
                         </label>
                         <input
@@ -323,7 +323,7 @@ export default function PartnerCart({ store }) {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-stone-900 mb-2">
                         接收 eSIM 的 Email{" "}
                         <span className="text-red-500">*</span>
                       </label>
@@ -386,14 +386,23 @@ export default function PartnerCart({ store }) {
                       />
                       <span className="text-xs text-gray-500 font-medium">
                         我同意{" "}
-                        <Link href="/terms" target="_blank" className="text-blue-600 hover:underline">
+                        <Link
+                          href="/terms"
+                          target="_blank"
+                          className="text-blue-600 hover:underline"
+                        >
                           服務條款
                         </Link>
                         、
-                        <Link href="/refund-policy" target="_blank" className="text-blue-600 hover:underline">
+                        <Link
+                          href="/refund-policy"
+                          target="_blank"
+                          className="text-blue-600 hover:underline"
+                        >
                           退換貨政策
                         </Link>
-                        ，並確認 Email 無誤；eSIM 掃描開通後即無法退款（除政策例外）。
+                        ，並確認 Email 無誤；eSIM
+                        掃描開通後即無法退款（除政策例外）。
                       </span>
                     </label>
                     <button
@@ -448,7 +457,7 @@ export default function PartnerCart({ store }) {
               <div className="flex justify-center gap-4 mt-10">
                 <Link
                   href={`/p/${store.domain}`}
-                  className="bg-gray-100 text-gray-700 font-bold py-3.5 px-8 rounded-xl hover:bg-gray-200 transition"
+                  className="bg-gray-100 text-stone-900 font-bold py-3.5 px-8 rounded-xl hover:bg-gray-200 transition"
                 >
                   回首頁
                 </Link>

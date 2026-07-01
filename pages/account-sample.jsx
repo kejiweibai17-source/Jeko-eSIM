@@ -65,7 +65,7 @@ export default function MemberDashboard() {
             1
           </div>
           <button className="relative">
-            <Bell className="w-6 h-6 text-gray-700" />
+            <Bell className="w-6 h-6 text-stone-900" />
             <span className="absolute 0 right-0 w-2 h-2 bg-[#00C300] rounded-full border border-white"></span>
           </button>
         </div>
@@ -152,7 +152,7 @@ export default function MemberDashboard() {
 
               {/* 白色展開內容 */}
               {isWhiteExpanded && (
-                <div className="px-4 pb-4 pt-2 grid grid-cols-3 gap-2 text-center text-sm font-medium text-gray-700 border-t border-gray-50 pt-4 mt-2">
+                <div className="px-4 pb-4 pt-2 grid grid-cols-3 gap-2 text-center text-sm font-medium text-stone-900 border-t border-gray-50 pt-4 mt-2">
                   <button className="flex items-center justify-center gap-1.5 hover:bg-gray-50 py-2 rounded-lg transition">
                     <ArrowLeftRight className="w-4 h-4" />
                     轉帳

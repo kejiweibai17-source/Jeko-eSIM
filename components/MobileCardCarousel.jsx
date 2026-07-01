@@ -23,7 +23,11 @@ export default function MobileCardCarousel({
 }) {
   const slides = Children.toArray(children);
   const autoplayPlugin = useRef(
-    Autoplay({ delay: autoplayDelay, stopOnInteraction: false, stopOnMouseEnter: true })
+    Autoplay({
+      delay: autoplayDelay,
+      stopOnInteraction: false,
+      stopOnMouseEnter: true,
+    }),
   );
 
   const plugins = autoplay ? [autoplayPlugin.current] : [];
@@ -36,7 +40,7 @@ export default function MobileCardCarousel({
       dragFree: false,
       slidesToScroll,
     },
-    plugins
+    plugins,
   );
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -56,7 +60,7 @@ export default function MobileCardCarousel({
 
   const scrollTo = useCallback(
     (index) => emblaApi?.scrollTo(index),
-    [emblaApi]
+    [emblaApi],
   );
 
   const scrollPrev = useCallback(() => {
@@ -84,7 +88,7 @@ export default function MobileCardCarousel({
               type="button"
               onClick={scrollPrev}
               aria-label="上一張"
-              className="absolute left-0 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-md border border-gray-100 text-gray-700 active:scale-95"
+              className="absolute left-0 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-md border border-gray-100 text-stone-900 active:scale-95"
             >
               <ChevronLeftIcon className="h-5 w-5" />
             </button>
@@ -92,7 +96,7 @@ export default function MobileCardCarousel({
               type="button"
               onClick={scrollNext}
               aria-label="下一張"
-              className="absolute right-0 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-md border border-gray-100 text-gray-700 active:scale-95"
+              className="absolute right-0 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-md border border-gray-100 text-stone-900 active:scale-95"
             >
               <ChevronRightIcon className="h-5 w-5" />
             </button>

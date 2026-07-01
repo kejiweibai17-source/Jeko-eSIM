@@ -19,46 +19,39 @@ const PARTNER_TYPES = [
   {
     value: "ig_kol",
     label: "IG KOL / 網紅",
-    icon: "📸",
     desc: "Instagram、Threads 等社群網紅",
   },
   {
     value: "group_leader",
     label: "團媽 / 開團主",
-    icon: "🛒",
     desc: "Line 群組、FB 社團開團",
   },
   {
     value: "blogger",
     label: "部落客 / 自媒體",
-    icon: "✍️",
     desc: "Blog、YouTube、Podcast",
   },
   {
     value: "travel_agency",
     label: "旅行社公司",
-    icon: "✈️",
     desc: "旅行社、自由行代訂",
   },
   {
     value: "car_rental",
     label: "包車 / 租車業者",
-    icon: "🚐",
     desc: "機場接送、包車旅遊",
   },
   {
     value: "hotel",
     label: "飯店 / 住宿業者",
-    icon: "🏨",
     desc: "民宿、飯店、旅宿",
   },
   {
     value: "tour_guide",
     label: "導遊 / 領隊",
-    icon: "🗺️",
     desc: "專業導遊、領隊、地陪",
   },
-  { value: "other", label: "其他", icon: "💼", desc: "以上皆非，請於下方說明" },
+  { value: "other", label: "其他", desc: "以上皆非，請於下方說明" },
 ];
 
 const SCALE_PEOPLE = [
@@ -528,13 +521,7 @@ function StepIndicator({ current, total }) {
                       : "bg-slate-100 text-slate-400"
                 }`}
               >
-                {done ? (
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  step.id
-                )}
+                {step.id}
               </div>
               <span
                 className={`text-[10px] font-bold text-center leading-tight ${
@@ -656,7 +643,7 @@ function ProfileFields({ partnerType, profile, setProfile }) {
   );
 }
 
-function SelectCard({ selected, onClick, icon, label, desc, compact }) {
+function SelectCard({ selected, onClick, label, desc, compact }) {
   if (compact) {
     return (
       <button
@@ -684,7 +671,6 @@ function SelectCard({ selected, onClick, icon, label, desc, compact }) {
       }`}
     >
       <div className="flex items-center gap-3">
-        <span className="text-2xl shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
           <p
             className={`text-sm font-bold ${selected ? "text-[#1a56db]" : "text-slate-800"}`}
@@ -698,26 +684,10 @@ function SelectCard({ selected, onClick, icon, label, desc, compact }) {
           )}
         </div>
         <div
-          className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition ${
+          className={`w-5 h-5 rounded-full border-2 shrink-0 transition ${
             selected ? "border-[#1a56db] bg-[#1a56db]" : "border-slate-300"
           }`}
-        >
-          {selected && (
-            <svg
-              className="w-3 h-3 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          )}
-        </div>
+        />
       </div>
     </button>
   );
@@ -996,21 +966,6 @@ export default function RegisterDistributor() {
       <Layout seo={{ title: "申請已送出 | JEKO eSIM 合作夥伴" }}>
         <div className="min-h-[60vh] flex items-center justify-center bg-white px-6 font-sans pt-28 pb-16">
           <div className="text-center max-w-md animate-in fade-in duration-500">
-          <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-[#1a56db] flex items-center justify-center mx-auto mb-6">
-            <svg
-              className="w-8 h-8 text-[#1a56db]"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
           <h1 className="text-2xl font-black text-slate-900 mb-3">
             申請已送出！
           </h1>
@@ -1046,9 +1001,6 @@ export default function RegisterDistributor() {
           </div>
 
           <div className="flex items-start gap-2 text-left bg-amber-50 border border-amber-100 rounded-xl px-3 py-3 mb-8">
-            <span className="text-amber-500 shrink-0 mt-0.5" aria-hidden>
-              ⏳
-            </span>
             <p className="text-xs text-amber-900/80 leading-relaxed">
               <strong className="text-amber-900">審核中尚無法登入夥伴後台。</strong>
               請先等候開通通知信，收到後再前往{" "}
@@ -1127,7 +1079,6 @@ export default function RegisterDistributor() {
                   key={t.value}
                   selected={form.partnerType === t.value}
                   onClick={() => selectPartnerType(t.value)}
-                  icon={t.icon}
                   label={t.label}
                   desc={t.desc}
                 />
@@ -1240,10 +1191,7 @@ export default function RegisterDistributor() {
               )}
 
               {isEmailVerified && (
-                <div className="flex items-center gap-2 text-[12px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
-                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                <div className="text-[12px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
                   Email 已驗證，請設定下方登入密碼
                 </div>
               )}
@@ -1432,8 +1380,8 @@ export default function RegisterDistributor() {
                         ?.label || "—",
                   },
                   { label: "名稱", value: form.companyName || "—" },
-                  { label: "Email", value: `${form.email || "—"}${isEmailVerified ? " ✓" : ""}` },
-                  { label: "登入密碼", value: form.password ? "已設定 ✓" : "—" },
+                  { label: "Email", value: `${form.email || "—"}${isEmailVerified ? "（已驗證）" : ""}` },
+                  { label: "登入密碼", value: form.password ? "已設定" : "—" },
                   { label: "聯絡人", value: form.contactName || "（未填）" },
                   { label: "電話", value: form.phone || "—" },
                   { label: "LINE ID", value: form.lineId || "（未填）" },

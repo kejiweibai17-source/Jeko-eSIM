@@ -289,7 +289,7 @@ const CategoryPage = ({ currentCategory, categories, initialProducts }) => {
                           <span className="font-bold text-sm text-slate-800 block mb-1 line-clamp-2 min-h-[40px]">
                             {product.name}
                           </span>
-                          <div className="text-gray-700 mt-2">
+                          <div className="text-stone-900 mt-2">
                             <div className="flex items-end gap-2">
                               <span className="text-blue-600 font-bold text-lg">
                                 NT${price}

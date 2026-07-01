@@ -249,7 +249,7 @@ const RegisterForm = ({ onSuccess, storeDomain }) => {
           <button
             type="button"
             onClick={() => handleOAuthLogin("google")}
-            className="flex items-center justify-center gap-2 w-full rounded-xl bg-white text-gray-700 py-3 text-[14px] font-bold transition hover:bg-gray-50 shadow-sm"
+            className="flex items-center justify-center gap-2 w-full rounded-xl bg-white text-stone-900 py-3 text-[14px] font-bold transition hover:bg-gray-50 shadow-sm"
           >
             Google
           </button>
@@ -559,7 +559,7 @@ export default function PartnerLoginRegisterPage({ store }) {
                         <button
                           type="button"
                           onClick={() => handleOAuthLogin("google")}
-                          className="flex items-center justify-center gap-2 w-full rounded-xl bg-white text-gray-700 py-3 text-[14px] font-bold transition hover:bg-gray-50 shadow-sm"
+                          className="flex items-center justify-center gap-2 w-full rounded-xl bg-white text-stone-900 py-3 text-[14px] font-bold transition hover:bg-gray-50 shadow-sm"
                         >
                           Google
                         </button>

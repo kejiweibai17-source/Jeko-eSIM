@@ -204,10 +204,10 @@ export default function WizardPage() {
                         {i === 1
                           ? "國家"
                           : i === 2
-                          ? "天數"
-                          : i === 3
-                          ? "APP"
-                          : "習慣"}
+                            ? "天數"
+                            : i === 3
+                              ? "APP"
+                              : "習慣"}
                       </span>
                     </div>
                   ))}
@@ -280,7 +280,7 @@ export default function WizardPage() {
                           className={`py-4 rounded-xl border font-bold text-lg transition-all ${
                             selections.days === d
                               ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                              : "bg-white text-gray-700 border-gray-200 hover:border-blue-400"
+                              : "bg-white text-stone-900 border-gray-200 hover:border-blue-400"
                           }`}
                         >
                           {d} 天

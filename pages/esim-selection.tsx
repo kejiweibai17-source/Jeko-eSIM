@@ -778,7 +778,7 @@ export default function GlobalPlanScanner() {
           </h1>
           <button
             onClick={() => setShowSavedOnly(!showSavedOnly)}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold transition-all shadow-sm ${showSavedOnly ? "bg-red-500 text-white shadow-red-200" : "bg-white text-gray-700 border hover:bg-gray-50"}`}
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold transition-all shadow-sm ${showSavedOnly ? "bg-red-500 text-white shadow-red-200" : "bg-white text-stone-900 border hover:bg-gray-50"}`}
           >
             {showSavedOnly
               ? "🔙 返回列表"
